@@ -1,0 +1,32 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #f4f6f8; color: #17202a; font-family: Arial, Helvetica, sans-serif; direction: rtl; }
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; }
+.shell { display: grid; grid-template-columns: 230px 1fr; min-height: 100vh; }
+.sidebar { background: #111827; color: white; padding: 28px 20px; }
+.brand { font-size: 21px; font-weight: 800; margin-bottom: 34px; }
+.nav { display: grid; gap: 8px; }
+.nav a { padding: 12px 14px; border-radius: 10px; color: #d1d5db; }
+.nav a:hover { background: #1f2937; color: white; }
+.main { padding: 34px; }
+.topline { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:24px; }
+h1 { margin:0; font-size:28px; }
+.sub { color:#6b7280; margin-top:6px; }
+.card { background:white; border:1px solid #e5e7eb; border-radius:16px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+.grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.stat { font-size:28px; font-weight:800; margin-top:8px; }
+.muted { color:#6b7280; }
+.toolbar { display:flex; gap:10px; align-items:center; margin-bottom:16px; }
+.input { width:100%; border:1px solid #d1d5db; border-radius:10px; padding:11px 12px; background:white; }
+.btn { border:0; border-radius:10px; padding:11px 16px; cursor:pointer; font-weight:700; }
+.btn-primary { background:#111827; color:white; }
+.table { width:100%; border-collapse:collapse; }
+.table th,.table td { text-align:right; padding:13px 10px; border-bottom:1px solid #eef0f2; }
+.table th { color:#6b7280; font-size:13px; }
+.badge { display:inline-block; padding:5px 9px; border-radius:999px; background:#eef2ff; font-size:12px; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.form-grid .full { grid-column:1 / -1; }
+label { display:grid; gap:6px; font-size:14px; font-weight:700; }
+textarea.input { min-height:90px; resize:vertical; }
+.section-title { margin:0 0 14px; font-size:18px; }
+@media(max-width:850px){ .shell{grid-template-columns:1fr}.sidebar{display:none}.main{padding:20px}.grid,.form-grid{grid-template-columns:1fr}.form-grid .full{grid-column:auto}.topline{align-items:flex-start;flex-direction:column}.table-wrap{overflow:auto} }
