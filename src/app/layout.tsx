@@ -1,5 +1,7 @@
 import Link from "next/link";
+import AuthGate from "@/components/auth-gate";
 import "./globals.css";
+import "leaflet/dist/leaflet.css";
 
 export const metadata = { title: "ניהול בודק חשמל", description: "MVP לניהול עסק לבודק חשמל" };
 
@@ -17,7 +19,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <Link href="/pricing">מחירון</Link>
             </nav>
           </aside>
-          <main className="main">{children}</main>
+          <main className="main"><AuthGate>{children}</AuthGate></main>
         </div>
       </body>
     </html>

@@ -9,8 +9,7 @@ create table public.customers (
   phone text not null check (length(btrim(phone)) > 0),
   email text,
   notes text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  created_at timestamptz not null default now()
 );
 
 create index customers_name_idx on public.customers using gin (to_tsvector('simple', full_name));
@@ -22,11 +21,8 @@ create table public.customer_addresses (
   label text not null check (length(btrim(label)) > 0),
   address text not null check (length(btrim(address)) > 0),
   city text,
-  latitude double precision,
-  longitude double precision,
   is_default boolean not null default false,
-  created_at timestamptz not null default now(),
-  constraint address_coordinates_together check ((latitude is null and longitude is null) or (latitude is not null and longitude is not null and latitude between -90 and 90 and longitude between -180 and 180))
+  created_at timestamptz not null default now()
 );
 
 create table public.job_types (
@@ -50,7 +46,6 @@ create table public.appointments (
   duration_minutes integer not null check (duration_minutes > 0),
   price numeric(10,2) not null check (price >= 0),
   status public.appointment_status not null default 'scheduled',
-  cancellation_reason text,
   reschedule_count integer not null default 0 check (reschedule_count >= 0),
   notes text,
   created_at timestamptz not null default now(),
@@ -127,58 +122,6 @@ begin
 end $$;
 revoke all on function public.create_customer(text,text,text,text,text,text) from public, anon;
 grant execute on function public.create_customer(text,text,text,text,text,text) to authenticated;
-
--- Save a customer and any number of initial addresses in one transaction.
-create function public.create_customer_with_addresses(
-  p_name text, p_phone text, p_notes text default '', p_addresses jsonb default '[]'::jsonb
-) returns uuid language plpgsql security invoker set search_path = '' as $$
-declare new_id uuid; item jsonb; item_label text; item_address text; item_city text; item_latitude double precision; item_longitude double precision; item_index integer := 0;
-begin
-  if jsonb_typeof(coalesce(p_addresses, '[]'::jsonb)) <> 'array' then
-    raise exception 'Addresses must be an array' using errcode = '22023';
-  end if;
-  insert into public.customers(full_name, phone, notes)
-    values (btrim(p_name), btrim(p_phone), nullif(btrim(p_notes), '')) returning id into new_id;
-  for item in select value from jsonb_array_elements(coalesce(p_addresses, '[]'::jsonb)) loop
-    item_label := coalesce(nullif(btrim(item->>'label'), ''), 'כתובת');
-    item_address := btrim(coalesce(item->>'address', ''));
-    item_city := btrim(coalesce(item->>'city', ''));
-    item_latitude := (item->>'latitude')::double precision;
-    item_longitude := (item->>'longitude')::double precision;
-    if item_address = '' or item_city = '' then
-      raise exception 'Each address requires an address and city' using errcode = '23514';
-    end if;
-    if item_latitude is null or item_longitude is null then
-      raise exception 'Each address requires verified coordinates' using errcode = '23514';
-    end if;
-    insert into public.customer_addresses(customer_id, label, address, city, latitude, longitude, is_default)
-      values (new_id, item_label, item_address, item_city, item_latitude, item_longitude, item_index = 0);
-    item_index := item_index + 1;
-  end loop;
-  return new_id;
-end $$;
-revoke all on function public.create_customer_with_addresses(text,text,text,jsonb) from public, anon;
-grant execute on function public.create_customer_with_addresses(text,text,text,jsonb) to authenticated;
-
-create function public.set_customer_updated_at() returns trigger language plpgsql security invoker set search_path = '' as $$
-begin new.updated_at := now(); return new; end $$;
-create trigger customers_set_updated_at before update on public.customers for each row execute function public.set_customer_updated_at();
-
-create function public.touch_related_customer() returns trigger language plpgsql security invoker set search_path = '' as $$
-begin update public.customers set updated_at = now() where id = coalesce(new.customer_id, old.customer_id); return coalesce(new, old); end $$;
-create trigger addresses_touch_customer after insert or update or delete on public.customer_addresses for each row execute function public.touch_related_customer();
-
-create function public.track_appointment_change() returns trigger language plpgsql security invoker set search_path = '' as $$
-begin
-  new.updated_at := now();
-  if new.starts_at is distinct from old.starts_at then
-    new.reschedule_count := old.reschedule_count + 1;
-    insert into public.appointment_reschedules(appointment_id, old_starts_at, new_starts_at) values(old.id, old.starts_at, new.starts_at);
-  end if;
-  return new;
-end $$;
-create trigger appointments_track_change before update on public.appointments for each row execute function public.track_appointment_change();
-create trigger appointments_touch_customer after insert or update or delete on public.appointments for each row execute function public.touch_related_customer();
 
 insert into public.job_types(name, default_price, default_duration_minutes) values
   ('בדיקת מתקן',650,90), ('בדיקת לוח',500,60), ('בדיקה תקופתית',800,120);
