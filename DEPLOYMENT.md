@@ -2,6 +2,16 @@
 
 The application is deployed as a Node.js Next.js application on Vercel and uses the existing hosted Supabase project.
 
+## Live production environment
+
+- URL: https://electrician-mvp-khaki.vercel.app
+- Vercel project: `electrician-mvp` in the `TalZ` Hobby team
+- Source: `talzemour-gif/electrician-mvp`, branch `main`
+- Initial production deployment: commit `87a2f04`
+- Status: live; `/`, `/customers`, `/calendar`, and `/pricing` return HTTP 200 and show the staff login when signed out.
+
+Vercel automatically creates a new deployment when changes are pushed to `main`.
+
 ## Required production environment variables
 
 Configure these in the Vercel project for Production, Preview, and Development environments:

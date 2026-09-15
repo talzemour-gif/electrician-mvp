@@ -76,6 +76,7 @@ supabase/
 ```
 
 Production deployment and rollback procedures are maintained in `DEPLOYMENT.md`.
+The live application is hosted at `https://electrician-mvp-khaki.vercel.app` and is deployed from the GitHub `main` branch through Vercel.
 
 ## Runtime architecture
 
