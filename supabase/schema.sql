@@ -88,6 +88,7 @@ create index appointments_starts_at_idx on public.appointments(starts_at);
 -- One business for this MVP. Membership is assigned only by the project administrator.
 create table public.app_members (
   user_id uuid primary key references auth.users(id) on delete cascade,
+  role text not null default 'staff' check (role in ('admin', 'staff')),
   created_at timestamptz not null default now()
 );
 alter table public.app_members enable row level security;
@@ -103,7 +104,10 @@ begin
     execute format('alter table public.%I enable row level security', t);
     execute format('revoke all on public.%I from anon, authenticated', t);
     execute format('grant select, insert, update, delete on public.%I to authenticated', t);
-    execute format('create policy staff_access on public.%I for all to authenticated using (exists (select 1 from public.app_members where user_id = (select auth.uid()))) with check (exists (select 1 from public.app_members where user_id = (select auth.uid())))', t);
+    execute format('create policy member_select on public.%I for select to authenticated using (exists (select 1 from public.app_members where user_id = (select auth.uid())))', t);
+    execute format('create policy member_insert on public.%I for insert to authenticated with check (exists (select 1 from public.app_members where user_id = (select auth.uid())))', t);
+    execute format('create policy member_update on public.%I for update to authenticated using (exists (select 1 from public.app_members where user_id = (select auth.uid()))) with check (exists (select 1 from public.app_members where user_id = (select auth.uid())))', t);
+    execute format('create policy admin_delete on public.%I for delete to authenticated using (exists (select 1 from public.app_members where user_id = (select auth.uid()) and role = ''admin''))', t);
   end loop;
 end $$;
 

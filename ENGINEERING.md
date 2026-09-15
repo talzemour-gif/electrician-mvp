@@ -39,7 +39,7 @@ Do not create mobile-only routes or duplicate data logic. Add `data-label` to ev
 
 ## Daily route map
 
-The calendar Day view sends that day's scheduled appointment addresses to `POST /api/day-route`. The server route geocodes them sequentially with OpenStreetMap Nominatim, preserving its one-request-per-second public-service limit, and requests a driving route from the public OSRM service. It returns ordered points, unresolved address indexes, and route geometry. Addresses are not written to application logs. An in-memory geocode cache and Next.js fetch revalidation reduce repeat calls.
+The calendar Day view sends that day's non-cancelled appointment addresses to `POST /api/day-route`, including completed appointments on historical days. The dashboard uses the same route component for today when scheduled work remains, or the next date containing scheduled appointments. The server route geocodes addresses sequentially with OpenStreetMap Nominatim, preserving its one-request-per-second public-service limit, and requests a driving route from the public OSRM service. It returns ordered points, unresolved address indexes, and route geometry. Addresses are not written to application logs. An in-memory geocode cache and Next.js fetch revalidation reduce repeat calls.
 
 Address create/edit forms require coordinates before saving. `AddressVerification` calls `POST /api/address-lookup` after the user enters an address and city. A successful lookup shows a movable marker. A failed lookup displays an inline error and a map so the user can click the correct location manually. Changing the written address or city clears the previous verification. Both lookup and daily routing use the server-only provider adapter in `src/lib/maps.ts`.
 
@@ -97,7 +97,7 @@ This MVP represents one business, not a multi-tenant SaaS platform.
 - Users can read only their own membership row.
 - Anonymous users have no business-table access.
 - Authenticated users without membership have no business-table access.
-- Approved members receive CRUD access to all business records through the `staff_access` RLS policies.
+- Approved members have an `admin` or `staff` role. Both roles can read, create, and update business records. Only `admin` can delete rows; this is enforced by RLS as well as the interface.
 - Browser code uses only the Supabase project URL and publishable key. Never expose a service-role key in the application or a `NEXT_PUBLIC_*` variable.
 
 Adding a member is an administrator operation described in `supabase/README.md`.
@@ -181,6 +181,7 @@ Current migration order:
 4. `202609100004_cancellation_reason.sql` — optional appointment cancellation reason.
 5. `202609140001_address_coordinates.sql` — coordinate columns and coordinate-aware atomic customer creation.
 6. `202609140002_coordinate_pair_constraint.sql` — strict coordinate-pair constraint correction after manual deployment.
+7. `202609150001_member_roles.sql` — admin/staff roles and admin-only database deletion policies.
 
 The hosted project was initialized manually through the Supabase SQL Editor. Those applications are not registered in Supabase CLI migration history. Reconcile the hosted baseline before adopting `supabase db push`; do not replay the initial migration blindly.
 

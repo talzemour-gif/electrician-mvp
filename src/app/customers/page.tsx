@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { getSupabase, type Customer } from '@/lib/supabase';
 import { FieldError, SaveError } from '@/components/form-feedback';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import { usePermissions } from '@/lib/use-permissions';
 const AddressVerification = dynamic(() => import('@/components/address-verification'), { ssr: false });
 
 const emptyForm = { name: '', phone: '', city: '', label: 'בית', address: '', notes: '' };
@@ -10,6 +12,7 @@ const emptyAddress = { label: 'בית', address: '', city: '', latitude: null as
 type AddressDraft = typeof emptyAddress & { key: number };
 const newAddressDraft = (): AddressDraft => ({ key: Date.now() + Math.random(), label: '', address: '', city: '', latitude: null, longitude: null });
 export default function CustomersPage() {
+  const { canDelete } = usePermissions();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [q, setQ] = useState('');
   const [show, setShow] = useState(false);
@@ -27,6 +30,7 @@ export default function CustomersPage() {
   const [formError, setFormError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
+  const [createdForMeeting, setCreatedForMeeting] = useState(false);
   async function load() {
     setLoading(true); setError('');
     try {
@@ -41,6 +45,9 @@ export default function CustomersPage() {
     finally { setLoading(false); }
   }
   useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('new') === '1') setShow(true);
+  }, []);
   const filtered = useMemo(() => customers.filter(c =>
     `${c.full_name} ${c.phone} ${c.customer_addresses.map(a => `${a.city ?? ''} ${a.address}`).join(' ')}`.toLowerCase().includes(q.trim().toLowerCase())), [q, customers]);
   async function addCustomer(e: React.FormEvent) {
@@ -59,7 +66,7 @@ export default function CustomersPage() {
         })),
       });
       if (error) throw error;
-      setForm(emptyForm); setNewAddresses([newAddressDraft()]); setShow(false); setMessage('הלקוח נשמר בהצלחה.');
+      setForm(emptyForm); setNewAddresses([newAddressDraft()]); setShow(false); setMessage('הלקוח נשמר בהצלחה.'); setCreatedForMeeting(new URLSearchParams(window.location.search).get('returnTo') === 'meeting');
       await load();
     } catch { setFormError('שמירת הלקוח נכשלה. בדקו את הפרטים והחיבור ונסו שוב.'); }
     finally { saveLock.current = false; setSaving(false); }
@@ -149,7 +156,7 @@ export default function CustomersPage() {
   return <>
     <div className="topline"><div><h1>לקוחות</h1><div className="sub">חיפוש, צפייה ועדכון לקוחות וכתובות</div></div><button className="btn btn-primary" disabled={saving} onClick={() => { setShow(v => !v); setEditing(null); setAddingAddress(null); setEditingAddress(null); setConfirmDeleteAddress(null); setForm(emptyForm); setNewAddresses([newAddressDraft()]); setMessage(''); }}>+ לקוח חדש</button></div>
     {error && <div role="alert" className="error">{error} <button className="btn" onClick={load} disabled={loading}>טען מחדש</button></div>}
-    {message && <p role="status" className="success">{message}</p>}
+    {message && <div role="status" className="success success-actions"><span>{message}</span>{createdForMeeting && <Link className="btn btn-primary" href="/calendar?new=1">יצירת פגישה עבור הלקוח</Link>}</div>}
     {show && <form noValidate className="card" style={{ marginBottom: 16 }} onSubmit={addCustomer}>
       <h2 className="section-title">לקוח חדש</h2>
       <fieldset disabled={saving}>
@@ -190,7 +197,7 @@ export default function CustomersPage() {
         {!editing.customer_addresses.length && <p className="muted">עדיין אין כתובות ללקוח.</p>}
         {editing.customer_addresses.map(address => <div className="managed-address" key={address.id}>
           <span><strong>{address.label}</strong> · {address.address}{address.city ? `, ${address.city}` : ''}</span>
-          <span className="address-actions"><button className="link-button" type="button" disabled={saving} onClick={() => startEditAddress(editing, address.id)}>עריכה</button><button className="link-button danger-text" type="button" disabled={saving} onClick={() => { setAddingAddress(null); setEditingAddress(null); setConfirmDeleteAddress({ customer: editing, addressId: address.id, label: address.label }); setMessage(''); setError(''); setFormError(''); setFieldErrors({}); }}>הסרה</button></span>
+          <span className="address-actions"><button className="link-button" type="button" disabled={saving} onClick={() => startEditAddress(editing, address.id)}>עריכה</button>{canDelete && <button className="link-button danger-text" type="button" disabled={saving} onClick={() => { setAddingAddress(null); setEditingAddress(null); setConfirmDeleteAddress({ customer: editing, addressId: address.id, label: address.label }); setMessage(''); setError(''); setFormError(''); setFieldErrors({}); }}>הסרה</button>}</span>
         </div>)}
       </div>
     </form>}

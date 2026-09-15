@@ -1,5 +1,5 @@
-import Link from "next/link";
 import AuthGate from "@/components/auth-gate";
+import MainNavigation from "@/components/main-navigation";
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
 
@@ -12,12 +12,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <div className="shell">
           <aside className="sidebar">
             <div className="brand">⚡ ניהול בודק חשמל</div>
-            <nav className="nav">
-              <Link href="/">דשבורד</Link>
-              <Link href="/calendar">יומן</Link>
-              <Link href="/customers">לקוחות</Link>
-              <Link href="/pricing">מחירון</Link>
-            </nav>
+            <MainNavigation />
           </aside>
           <main className="main"><AuthGate>{children}</AuthGate></main>
         </div>

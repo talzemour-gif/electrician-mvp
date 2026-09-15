@@ -2,7 +2,7 @@
 begin;
 select set_config('test.staff_id', gen_random_uuid()::text, true);
 insert into auth.users(id) values(current_setting('test.staff_id')::uuid);
-insert into public.app_members(user_id) values(current_setting('test.staff_id')::uuid);
+insert into public.app_members(user_id, role) values(current_setting('test.staff_id')::uuid, 'admin');
 select set_config('request.jwt.claim.sub', current_setting('test.staff_id'), true);
 set local role authenticated;
 do $$
@@ -40,6 +40,24 @@ begin
   if exists(select 1 from public.customer_addresses where customer_id=c) then raise exception 'Address cascade failed'; end if;
 end $$;
 reset role;
+select set_config('test.readonly_delete_id', gen_random_uuid()::text, true);
+insert into auth.users(id) values(current_setting('test.readonly_delete_id')::uuid);
+insert into public.app_members(user_id, role) values(current_setting('test.readonly_delete_id')::uuid, 'staff');
+select set_config('request.jwt.claim.sub', current_setting('test.readonly_delete_id'), true);
+set local role authenticated;
+do $$
+declare c uuid;
+begin
+  c := public.create_customer_with_addresses(
+    'Restricted staff verification', '000-0000000', '',
+    jsonb_build_array(jsonb_build_object('label', 'Test', 'address', 'Street 3', 'city', 'City 3', 'latitude', 32.3, 'longitude', 34.7))
+  );
+  update public.customers set notes = 'Staff update allowed' where id = c;
+  if not found then raise exception 'Staff update denied'; end if;
+  delete from public.customers where id = c;
+  if found then raise exception 'Staff delete allowed'; end if;
+end $$;
+reset role;
 select set_config('request.jwt.claim.sub', gen_random_uuid()::text, true);
 set local role authenticated;
 do $$ begin
@@ -70,4 +88,4 @@ do $$ begin
 end $$;
 reset role;
 rollback;
-select 'PASS: staff CRUD, multi-address save, rollback, membership protection, non-member and anonymous denial' as result;
+select 'PASS: admin CRUD, staff update/delete restriction, multi-address save, rollback, membership protection, non-member and anonymous denial' as result;

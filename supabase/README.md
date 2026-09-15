@@ -13,8 +13,9 @@ Before adopting CLI migrations on this project, reconcile the applied baseline i
 Tables: customers, customer_addresses, job_types, appointments, availability_blocks,
 appointment_reschedules, app_members. Three initial service prices are seeded; no demo customers.
 All tables have RLS enabled. Anonymous visitors have no table access. Authenticated
-non-members cannot access business records. Staff can manage business records but
-cannot change membership. Customer + first address creation uses an atomic, invoker-security RPC.
+non-members cannot access business records. Staff can read, create, and update records;
+only admins can delete. Members cannot change membership. Customer creation uses an
+atomic, invoker-security RPC.
 
 ## Add a staff login
 
@@ -58,7 +59,7 @@ The browser client was also checked to receive permission denied for signed-out 
 - New and edited addresses must be located by the map service or manually pinned;
   verified latitude and longitude are stored together on `customer_addresses`.
 - Pricing: database list, create and edit with notes; updates do not rewrite historical appointment prices.
-- Dashboard: actual customer, future appointment and active service counts.
+- Dashboard: actual customer, open appointment and active service counts, plus the route for today or the next scheduled work day.
 - Calendar: creates and lists appointments, uses `Asia/Jerusalem` for input and
   display, searches customers by name or phone in recent-activity order, fills price
   and duration from the selected service, edits and cancels meetings, adds customer
