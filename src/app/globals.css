@@ -37,6 +37,7 @@ textarea.input { min-height:90px; resize:vertical; }
 .auth-card { max-width: 440px; margin: 40px auto; }
 .auth-form { display: grid; gap: 18px; margin-top: 24px; }
 .session-bar { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; font-size: 14px; }
+.workspace-name { margin-inline-end: auto; font-weight: 800; color: #3730a3; }
 .error { color: #991b1b; background: #fef2f2; padding: 12px; border-radius: 10px; margin-bottom: 16px; }
 .field-error { color: #b91c1c; font-size: 13px; font-weight: 600; }
 .save-error { color: #991b1b; padding: 9px 11px; border-radius: 9px; background: #fef2f2; font-size: 13px; font-weight: 600; }

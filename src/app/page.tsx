@@ -62,13 +62,13 @@ export default function HomePage() {
       <div className="grid">
         <Link className="card" href="/customers"><div className="muted">לקוחות</div><div className="stat">{stats.customers}</div></Link>
         <Link className="card" href="/calendar"><div className="muted">פגישות פתוחות</div><div className="stat">{stats.appointments}</div></Link>
-        <Link className="card" href="/pricing"><div className="muted">סוגי עבודות פעילים</div><div className="stat">{stats.jobs}</div></Link>
+        <Link className="card" href="/pricing"><div className="muted">שירותים פעילים</div><div className="stat">{stats.jobs}</div></Link>
       </div>
       <section className="dashboard-route">
         <div className="section-heading"><h2>{routeDay ? `מסלול ל${displayDate.format(new Date(`${routeDay.date}T12:00:00Z`))}` : 'המסלול הבא'}</h2><span className="count-pill">{routeStops.length}</span></div>
         {routeDay ? <DayRouteMap stops={routeStops} /> : <div className="card empty-state">אין פגישות פתוחות להצגה.</div>}
       </section>
     </>}
-    <div className="card capabilities-card"><h2 className="section-title">מה אפשר לעשות במערכת</h2><ul><li>ניהול לקוחות, הערות ומספר כתובות מאומתות במפה</li><li>יצירה, חיפוש, עדכון וביטול פגישות</li><li>תצוגות רשימה, יום ושבוע עם מסלול נסיעה יומי</li><li>ניהול מחירון, משך עבודה והערות לכל שירות</li><li>גישה מאובטחת לצוות ממחשב ומטלפון</li></ul></div>
+    <div className="card capabilities-card"><h2 className="section-title">מה אפשר לעשות במערכת</h2><ul><li>ניהול לקוחות, הערות ומספר כתובות מאומתות במפה</li><li>יצירה, חיפוש, עדכון וביטול פגישות</li><li>תצוגות רשימה, יום ושבוע עם מסלול נסיעה יומי</li><li>ניהול שירותים, מחירים, משך והערות</li><li>סביבת עבודה פרטית ומאובטחת לכל עסק</li></ul></div>
   </>;
 }

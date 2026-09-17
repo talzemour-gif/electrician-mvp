@@ -4,7 +4,7 @@ Last updated: 2026-09-17
 
 ## Purpose and current scope
 
-This is a Hebrew, right-to-left business-management web application for an electrical inspector in Israel. The current MVP gives approved staff a dashboard, customer and address management, a service price list, and appointment scheduling. The longer-term product direction includes WhatsApp-based customer communication and geographic workday planning; neither is implemented yet.
+This is a Hebrew, right-to-left business-management web application for mobile service businesses in Israel. Each organization has a private workspace with its own dashboard, customers, addresses, services, and appointments. The initial tenants are an electrical-inspection business and a sports-therapy test business.
 
 The application currently supports:
 
@@ -87,7 +87,7 @@ The live application is hosted at `https://electrician-mvp-khaki.vercel.app` and
 
 ## Runtime architecture
 
-`src/app/layout.tsx` renders the persistent RTL navigation shell and wraps every page in `AuthGate`. `AuthGate` restores the Supabase session, signs users in or out, and checks the current user's row in `app_members` before rendering business data.
+`src/app/layout.tsx` renders the persistent RTL navigation shell and wraps every page in `AuthGate`. `AuthGate` restores the Supabase session, signs users in or out, and loads the current user's `organization_members` row and organization name before rendering business data.
 
 Pages call the singleton returned by `getSupabase()` and manage their own loading, form, validation, and error state. Joined PostgREST queries provide related customer, address, service, and appointment data. Mutations run with the signed-in user's JWT and therefore remain subject to database RLS.
 
@@ -97,23 +97,29 @@ Customer creation with multiple initial addresses uses `create_customer_with_add
 
 ## Authentication and authorization
 
-This MVP represents one business, not a multi-tenant SaaS platform.
+The application has database-enforced tenant isolation for a limited two-business pilot.
 
 - Supabase Auth owns user credentials and sessions.
-- `app_members` is the approved-staff allowlist.
+- `organization_members` is the approved-user allowlist and maps each user to one organization.
 - Users can read only their own membership row.
 - Anonymous users have no business-table access.
 - Authenticated users without membership have no business-table access.
-- Approved members have an `admin` or `staff` role. Both roles can read, create, and update business records. Only `admin` can delete rows; this is enforced by RLS as well as the interface.
+- Approved members have an `admin` or `staff` role within their organization. Both roles can read, create, and update that organization's records. Only `admin` can delete rows.
+- Every business table has a mandatory `organization_id`. RLS compares it with `current_organization_id()`, and composite foreign keys prevent cross-organization customer, address, service, appointment, and history relationships.
+- The current pilot intentionally allows one organization membership per user and has no workspace switcher.
 - Browser code uses only the Supabase project URL and publishable key. Never expose a service-role key in the application or a `NEXT_PUBLIC_*` variable.
 
 Adding a member is an administrator operation described in `supabase/README.md`.
 
 ## Database model
 
+### `organizations` and `organization_members`
+
+`organizations` identifies each private workspace. `organization_members` maps an authenticated user to one workspace and stores its `admin` or `staff` role. Membership is provisioned through Supabase administration and cannot be changed through the application.
+
 ### `customers`
 
-Stores contact details and customer notes. `updated_at` represents recent business activity, not only direct profile edits. Triggers also touch it when an address or appointment changes, which drives the recent-customer appointment picker.
+Stores tenant-owned contact details and customer notes. `updated_at` represents recent business activity, not only direct profile edits. Triggers also touch it when an address or appointment changes, which drives the recent-customer appointment picker.
 
 ### `customer_addresses`
 
@@ -134,10 +140,6 @@ Append-only scheduling history. The appointment update trigger increments `resch
 ### `availability_blocks`
 
 Reserved for working-hours and availability planning. The table exists, but the current UI does not use it.
-
-### `app_members`
-
-Maps approved Supabase Auth user IDs to the single business. Membership changes are intentionally unavailable to normal application users.
 
 ## Database functions and triggers
 
@@ -189,6 +191,7 @@ Current migration order:
 5. `202609140001_address_coordinates.sql` — coordinate columns and coordinate-aware atomic customer creation.
 6. `202609140002_coordinate_pair_constraint.sql` — strict coordinate-pair constraint correction after manual deployment.
 7. `202609150001_member_roles.sql` — admin/staff roles and admin-only database deletion policies.
+8. `202609170001_multi_tenancy.sql` — organizations, tenant ownership, composite integrity constraints, and tenant-scoped RLS.
 
 The hosted project was initialized manually through the Supabase SQL Editor. Those applications are not registered in Supabase CLI migration history. Reconcile the hosted baseline before adopting `supabase db push`; do not replay the initial migration blindly.
 
@@ -212,7 +215,7 @@ For user-facing workflow changes, also test the affected path in the browser whi
 - Shared database types are handwritten and incomplete. Generate Supabase TypeScript types before the schema or query surface grows substantially.
 - There is no automated browser test suite.
 - Hosted migration history is not managed by the Supabase CLI yet.
-- There is no business/tenant ID; every approved member can access all records.
+- Each user can currently belong to only one organization; there is no workspace switcher or self-service invitation flow.
 - Availability, route optimization, WhatsApp integration, reminders, and customer self-service are future work.
 
 ## Documentation maintenance rule

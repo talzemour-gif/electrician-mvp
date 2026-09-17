@@ -1,6 +1,6 @@
 # Electrician MVP
 
-Hebrew, right-to-left business management app for an electrical inspector in Israel.
+Hebrew, right-to-left business management app for mobile service businesses in Israel.
 Built with Next.js, React, TypeScript and Supabase.
 
 Engineering architecture, schema notes, and contribution guidance are documented in
@@ -25,7 +25,7 @@ WATCHPACK_POLLING=true npm run dev -- --hostname 127.0.0.1 --webpack
 See `supabase/README.md` for schema setup, staff approval and database tests.
 Copy `.env.example` to `.env.local` and supply the project URL and publishable key.
 The hosted database has been initialized. Each app user needs a Supabase Auth login
-and an approved `app_members` entry. Supabase dashboard credentials are separate.
+and an approved `organization_members` entry. Supabase dashboard credentials are separate.
 
 Customers, their addresses and notes are saved in Supabase. Existing customer
 details and addresses can be edited, and unused addresses can be removed after

@@ -33,6 +33,21 @@ The MVP already includes:
 
 **Success measure:** Approved staff can reliably use the system from a normal browser without running it on a developer's computer.
 
+### Phase 1.5 — Multi-tenant foundation
+
+**Status:** In progress (started 2026-09-17).
+
+**Goal:** Let the electrician business and a sports-therapy business test the same application with completely separate data.
+
+1. Add organizations and organization membership to the database.
+2. Assign all existing records and users to the electrician organization.
+3. Enforce organization ownership on customers, addresses, services, appointments, availability, and history through foreign keys and Row Level Security.
+4. Show the active organization in the interface and use profession-neutral product wording.
+5. Add database regression tests that attempt cross-organization reads and writes.
+6. Create the sports-therapy organization and its administrator only after the production migration and isolation tests pass.
+
+**Success measure:** Each test business can create its own services, customers, addresses, and appointments, and neither can read or modify the other business's records.
+
 ### Phase 2 — Add missing operational basics
 
 **Goal:** Cover the minimum workflow needed to operate the business in the system.
@@ -125,9 +140,10 @@ Payment **status tracking** remains in scope because staff need to know whether 
 
 1. Prepare the existing MVP for production deployment.
 2. Deploy it and verify authentication, database access, and core workflows on mobile and laptop.
-3. Implement appointment completion, payment status, contact source, history, export, and backup.
-4. Run the one-week production pilot.
-5. Prioritize pilot findings before starting WhatsApp-assisted communication.
+3. Complete and verify the two-business multi-tenant foundation.
+4. Implement appointment completion, payment status, contact source, history, export, and backup.
+5. Run the one-week production pilot.
+6. Prioritize pilot findings before starting WhatsApp-assisted communication.
 
 ## Decisions to make with the electrician
 

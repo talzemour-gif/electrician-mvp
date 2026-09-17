@@ -7,6 +7,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState(false);
+  const [organizationName, setOrganizationName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -16,7 +17,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     try {
       const db = getSupabase();
       const { data: { subscription } } = db.auth.onAuthStateChange((_event, next) => {
-        if (active) { setAllowed(false); setLoading(!!next); setSession(next); }
+        if (active) { setAllowed(false); setOrganizationName(''); setLoading(!!next); setSession(next); }
       });
       db.auth.getSession().then(({ data, error }) => {
         if (!active) return;
@@ -29,10 +30,12 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!session) return;
     let active = true;
-    Promise.resolve(getSupabase().from('app_members').select('user_id').eq('user_id', session.user.id).maybeSingle())
+    Promise.resolve(getSupabase().from('organization_members').select('user_id,organizations(name)').eq('user_id', session.user.id).maybeSingle())
       .then(({ data, error }) => {
         if (!active) return;
         setAllowed(!!data && !error);
+        const organization = data?.organizations as unknown as { name?: string } | null;
+        setOrganizationName(organization?.name ?? '');
         setError(error ? 'לא ניתן לבדוק הרשאות. נסו להתנתק ולהתחבר מחדש.' : '');
         setLoading(false);
       }).catch(() => {
@@ -66,7 +69,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     </form>
   </section>;
   return <>
-    <div className="session-bar"><span dir="ltr">{session.user.email}</span><button className="btn" disabled={busy} onClick={logout}>התנתקות</button></div>
+    <div className="session-bar"><span className="workspace-name">{organizationName}</span><span dir="ltr">{session.user.email}</span><button className="btn" disabled={busy} onClick={logout}>התנתקות</button></div>
     {error && <p role="alert" className="error">{error}</p>}
     {allowed ? <div key={session.user.id}>{children}</div> : <div className="card"><h1>נדרשת הרשאת גישה</h1><p>החשבון מחובר, אך עדיין לא נוסף לצוות העסק. יש לפנות למנהל המערכת.</p></div>}
   </>;

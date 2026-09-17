@@ -1,38 +1,48 @@
 # Database setup
 
-This MVP uses one shared business database, accessible only to approved staff.
+This MVP supports separate private workspaces for approved service businesses.
 
 ## Fresh project
 
-Run `migrations/202609100001_initial.sql` once in the Supabase SQL Editor as postgres.
-`schema.sql` is the same initial schema for convenience; do not run both.
+Run `schema.sql` once in the Supabase SQL Editor as postgres. It creates the complete
+current schema for a fresh project. Do not also replay the individual migrations.
 The electrician-mvp hosted project was initialized through the SQL Editor on 2026-09-10.
 This manual initialization does not register the migration with the Supabase CLI.
 Before adopting CLI migrations on this project, reconcile the applied baseline instead of replaying it.
 
-Tables: customers, customer_addresses, job_types, appointments, availability_blocks,
-appointment_reschedules, app_members. Three initial service prices are seeded; no demo customers.
+Tables: organizations, organization_members, customers, customer_addresses, job_types,
+appointments, availability_blocks, and appointment_reschedules. Three initial electrical
+service prices are seeded only for the electrician organization; no demo customers.
 All tables have RLS enabled. Anonymous visitors have no table access. Authenticated
-non-members cannot access business records. Staff can read, create, and update records;
-only admins can delete. Members cannot change membership. Customer creation uses an
-atomic, invoker-security RPC.
+non-members cannot access business records. Members can access only their organization's
+records. Staff can read, create, and update; only organization admins can delete. Members
+cannot change membership. Customer creation uses an atomic, invoker-security RPC.
 
-## Add a staff login
+## Add an organization administrator
 
 1. In Supabase Authentication > Users, create a user with their email and password.
    The account owner should enter their password themselves. Auto-confirm is suitable
    for this administrator-created login.
 2. After verifying the user's identity, copy their UUID from Authentication > Users.
-3. Run the following in the SQL Editor, replacing the placeholder with that exact UUID:
+3. Run the following in the SQL Editor, replacing the placeholders. It creates an empty
+   organization and assigns the user as its administrator in one transaction:
 
 ```sql
-insert into public.app_members(user_id) values ('USER_UUID_HERE')
-on conflict (user_id) do nothing;
+begin;
+with new_organization as (
+  insert into public.organizations(name, profession)
+  values ('BUSINESS_NAME_HERE', 'PROFESSION_HERE')
+  returning id
+)
+insert into public.organization_members(user_id, organization_id, role)
+select 'USER_UUID_HERE', id, 'admin' from new_organization;
+commit;
 ```
 
-Only the project administrator can approve staff. A Supabase dashboard login and
-an application login are separate accounts. Membership grants access to the entire
-single business; this MVP is not a multi-business SaaS.
+To add staff to an existing organization, insert their Auth user UUID and the existing
+organization UUID into `organization_members`. Only the project administrator can provision
+membership. A Supabase dashboard login and an application login are separate accounts.
+The pilot supports one organization per user and has no in-app invitation flow.
 
 ## Local connection
 
@@ -43,8 +53,8 @@ browser code or `NEXT_PUBLIC_` variables. The app requires no service-role key.
 ## Verification
 
 Run `tests/access-and-save.sql` as postgres in the SQL Editor. It creates temporary
-fixtures inside one transaction, checks staff CRUD and atomic rollback, membership
-protection, non-member read/write denial, and anonymous denial, then rolls everything
+fixtures inside one transaction, checks tenant isolation, staff CRUD and atomic rollback,
+membership protection, cross-tenant denial, non-member denial, and anonymous denial, then rolls everything
 back. The final result must start with PASS.
 
 The initial schema and access checks were applied successfully to the hosted database.

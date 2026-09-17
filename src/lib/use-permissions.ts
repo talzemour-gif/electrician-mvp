@@ -7,7 +7,7 @@ export function usePermissions() {
   const [canDelete, setCanDelete] = useState(false);
   useEffect(() => {
     let active = true;
-    getSupabase().from('app_members').select('role').maybeSingle()
+    getSupabase().from('organization_members').select('role').maybeSingle()
       .then(({ data }) => { if (active) setCanDelete(data?.role === 'admin'); });
     return () => { active = false; };
   }, []);

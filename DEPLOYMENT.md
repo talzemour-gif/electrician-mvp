@@ -36,7 +36,8 @@ These are the same public client values documented in `.env.example`. Never add 
 
 - The page loads over HTTPS on a mobile phone and a laptop.
 - An anonymous visitor sees only the login form.
-- An authenticated user who is not in `app_members` cannot access business data.
+- An authenticated user who is not in `organization_members` cannot access business data.
+- A member can access only records owned by their organization.
 - An approved staff user can sign in and sign out.
 - Dashboard totals load.
 - A test customer and verified address can be created, edited, and removed.
