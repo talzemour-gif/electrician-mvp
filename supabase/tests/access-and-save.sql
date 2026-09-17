@@ -27,7 +27,7 @@ values (current_setting('test.org_b')::uuid, 'Tenant B private customer', '222')
 select set_config('request.jwt.claim.sub', current_setting('test.admin_a'), true);
 set local role authenticated;
 do $$
-declare c uuid; a uuid; n integer;
+declare c uuid; a uuid; v_note_id uuid; n integer;
 begin
   if public.current_organization_id() <> current_setting('test.org_a')::uuid then raise exception 'Wrong current organization'; end if;
   if (select count(*) from public.organizations) <> 1 then raise exception 'Organization isolation failed'; end if;
@@ -49,14 +49,23 @@ begin
   ) returning id into a;
   update public.appointments set status = 'in_progress', started_at = now() where id = a and status = 'scheduled';
   if not found then raise exception 'Appointment start transition failed'; end if;
-  insert into public.appointment_notes(appointment_id, note_type, body) values(a, 'research', 'Timestamped research note');
+  insert into public.appointment_notes(appointment_id, note_type, body, use_in_final_report) values(a, 'research', 'Timestamped research note', true) returning id into v_note_id;
   if not exists(select 1 from public.appointment_notes where appointment_id = a and created_by = current_setting('test.admin_a')::uuid) then raise exception 'Appointment note author or tenant assignment failed'; end if;
+  insert into public.appointment_note_attachments(note_id, storage_path, file_name, mime_type, size_bytes)
+  values(v_note_id, current_setting('test.org_a') || '/test/verification.pdf', 'verification.pdf', 'application/pdf', 100);
+  if not exists(select 1 from public.appointment_note_attachments where note_id = v_note_id and organization_id = current_setting('test.org_a')::uuid) then raise exception 'Appointment attachment tenant assignment failed'; end if;
   update public.appointments set status = 'completed', completed_at = now() where id = a and status = 'in_progress';
   if not found then raise exception 'Appointment completion transition failed'; end if;
   begin
     insert into public.appointment_notes(organization_id, appointment_id, note_type, body)
     values(current_setting('test.org_b')::uuid, a, 'meeting_summary', 'Cross tenant note');
     raise exception 'Cross-tenant appointment note insert allowed';
+  exception when insufficient_privilege or foreign_key_violation then null;
+  end;
+  begin
+    insert into public.appointment_note_attachments(organization_id, note_id, storage_path, file_name, mime_type, size_bytes)
+    values(current_setting('test.org_b')::uuid, v_note_id, current_setting('test.org_b') || '/cross.pdf', 'cross.pdf', 'application/pdf', 100);
+    raise exception 'Cross-tenant appointment attachment insert allowed';
   exception when insufficient_privilege or foreign_key_violation then null;
   end;
 

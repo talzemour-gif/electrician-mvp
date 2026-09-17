@@ -135,7 +135,11 @@ References a customer, customer address, and service. It stores the scheduled in
 
 ### `appointment_notes`
 
-Stores any number of timestamped notes for an appointment. Each note is classified as `research` or `meeting_summary`, records its author through `created_by`, and is tenant-isolated with an organization-consistent appointment foreign key. Members may add and update notes; only organization admins may delete them. The records are designed to appear in the customer timeline in a later Phase 2 change.
+Stores any number of timestamped notes for an appointment. Each note is classified as `research` or `meeting_summary`, records its author through `created_by`, and has a `use_in_final_report` flag. Text is optional when the note has an attachment. Notes are tenant-isolated with an organization-consistent appointment foreign key. Members may add and update notes; only organization admins may delete them. The records are designed to appear in the customer timeline in a later Phase 2 change.
+
+### `appointment_note_attachments`
+
+Stores private attachment metadata for note documents, images, and short videos. Binary files live in the private Supabase Storage bucket `appointment-files`; object paths begin with the organization ID and Storage RLS compares that folder with `current_organization_id()`. The UI permits five files per note and 50 MB per file. It creates one-hour signed URLs for viewing, previews supported images and videos, and renders documents as secure links. Do not make this bucket public.
 
 ### `appointment_reschedules`
 
@@ -211,6 +215,7 @@ Current migration order:
 8. `202609170001_multi_tenancy.sql` — organizations, tenant ownership, composite integrity constraints, and tenant-scoped RLS.
 9. `202609170002_remove_redundant_tenant_foreign_keys.sql` — removes the superseded single-column relationships so tenant-safe PostgREST embeds are unambiguous, including for empty organizations.
 10. `202609170003_appointment_completion_notes.sql` — adds the in-progress/completed workflow timestamps and tenant-isolated, timestamped appointment notes.
+11. `202609170004_note_attachments.sql` — adds final-report flags, private mixed-media note attachments, and tenant-scoped Storage policies.
 
 The hosted project was initialized manually through the Supabase SQL Editor. Those applications are not registered in Supabase CLI migration history. Reconcile the hosted baseline before adopting `supabase db push`; do not replay the initial migration blindly.
 
