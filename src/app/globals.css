@@ -116,6 +116,8 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .note-form { display: grid; gap: 14px; }
 .file-input { padding: 8px; }
 .selected-files { margin: -4px 0 0; padding-right: 20px; color: #4b5563; font-size: 13px; }
+.file-selection-confirmation { display: grid; gap: 5px; padding: 10px 12px; border-radius: 10px; color: #166534; background: #f0fdf4; font-size: 13px; }
+.file-selection-confirmation .selected-files { margin: 3px 0 0; }
 .report-checkbox { display: flex; grid-template-columns: none; align-items: center; gap: 8px; }
 .report-checkbox input { width: 18px; height: 18px; }
 .customer-picker { position: relative; display: grid; gap: 7px; }

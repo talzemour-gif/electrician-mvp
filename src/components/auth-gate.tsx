@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { getSupabase } from '@/lib/supabase';
 
@@ -12,16 +12,27 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const currentUserId = useRef<string | null>(null);
   useEffect(() => {
     let active = true;
     try {
       const db = getSupabase();
       const { data: { subscription } } = db.auth.onAuthStateChange((_event, next) => {
-        if (active) { setAllowed(false); setOrganizationName(''); setLoading(!!next); setSession(next); }
+        if (!active) return;
+        const nextUserId = next?.user.id ?? null;
+        if (!next) {
+          currentUserId.current = null; setAllowed(false); setOrganizationName(''); setLoading(false); setSession(null);
+          return;
+        }
+        if (currentUserId.current !== nextUserId) {
+          currentUserId.current = nextUserId; setAllowed(false); setOrganizationName(''); setLoading(true);
+        }
+        setSession(next);
       });
       db.auth.getSession().then(({ data, error }) => {
         if (!active) return;
         if (error) { setError('לא ניתן לבדוק את ההתחברות. נסו לרענן.'); setLoading(false); return; }
+        currentUserId.current = data.session?.user.id ?? null;
         setSession(data.session); if (!data.session) setLoading(false);
       }).catch(() => { if (active) { setError('לא ניתן להתחבר. בדקו את חיבור האינטרנט ורעננו.'); setLoading(false); } });
       return () => { active = false; subscription.unsubscribe(); };
@@ -42,7 +53,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         if (active) { setAllowed(false); setError('בדיקת ההרשאות נכשלה. נסו להתנתק ולהתחבר מחדש.'); setLoading(false); }
       });
     return () => { active = false; };
-  }, [session]);
+  }, [session?.user.id]);
   async function login(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setError('');
     try {

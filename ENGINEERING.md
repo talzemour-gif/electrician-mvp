@@ -90,6 +90,8 @@ The live application is hosted at `https://electrician-mvp-khaki.vercel.app` and
 
 `src/app/layout.tsx` renders the persistent RTL navigation shell and wraps every page in `AuthGate`. `AuthGate` restores the Supabase session, signs users in or out, and loads the current user's `organization_members` row and organization name before rendering business data.
 
+Supabase can emit token-refresh events when a mobile browser returns from the camera or file picker. `AuthGate` must keep an already-authorized user's page mounted for same-user session refreshes; resetting `allowed` or `loading` in that path discards in-progress forms and selected files. It rechecks membership only when the authenticated user ID changes.
+
 Pages call the singleton returned by `getSupabase()` and manage their own loading, form, validation, and error state. Joined PostgREST queries provide related customer, address, service, and appointment data. Mutations run with the signed-in user's JWT and therefore remain subject to database RLS.
 
 Mutation forms use shared `FieldError` and `SaveError` components. Each form keeps page-loading errors separate from its submission summary and field-error map. Validation failures appear beside the relevant input and beside the Save button; changing a field clears its own error. Forms use `noValidate` so application validation has consistent placement instead of relying on browser-native validation bubbles. Preserve this pattern when adding or extracting forms.
