@@ -48,6 +48,16 @@ These are the same public client values documented in `.env.example`. Never add 
 
 Remove production test records after validation if they are not useful business data.
 
+### Phase 1 closure — 2026-09-17
+
+- Release commit: `a647919`
+- `npm run lint`, `npx tsc --noEmit`, `npm run build`, and `git diff --check` passed.
+- `/`, `/customers`, `/calendar`, and `/pricing` returned HTTP 200 in production.
+- The production monitoring endpoint returned HTTP 204 after deployment.
+- Signed-out production access displayed only the login interface, with no business records.
+- The production login interface was visually checked at a narrow mobile width. Laptop workflows and authenticated mobile workflows had already been exercised during the production rollout; issues found during that rollout were fixed before closure.
+- Git contained no tracked environment or secret file.
+
 ## Error monitoring
 
 Unexpected React rendering failures are caught by the route and global error boundaries. Staff see a Hebrew recovery screen, and the browser sends a small event to `POST /api/client-error`. The event contains only the page path, error digest, source, and timestamp; it must not contain customer or form data. Map API failures are logged by their server routes.
