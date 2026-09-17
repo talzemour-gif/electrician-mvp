@@ -10,7 +10,9 @@ const AddressVerification = dynamic(() => import('@/components/address-verificat
 type CalendarCustomer = { id: string; full_name: string; phone: string; updated_at: string; customer_addresses: { id: string; label: string; address: string; city: string | null; latitude: number | null; longitude: number | null }[] };
 type Appointment = {
   id: string; customer_id: string; customer_address_id: string; job_type_id: string; starts_at: string; duration_minutes: number; price: number;
-  status: 'scheduled' | 'completed' | 'cancelled'; notes: string | null; cancellation_reason: string | null;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled'; notes: string | null; cancellation_reason: string | null;
+  started_at: string | null; completed_at: string | null;
+  appointment_notes: { id: string; note_type: 'research' | 'meeting_summary'; body: string; created_at: string }[];
   customers: { full_name: string; phone: string } | null;
   customer_addresses: { label: string; address: string; city: string | null; latitude: number | null; longitude: number | null } | null;
   job_types: { name: string } | null;
@@ -52,13 +54,14 @@ function weekStartFor(dateValue: string) {
   return addDays(dateValue, -weekday);
 }
 
-function AppointmentCard({ appointment, onEdit, onCancel }: { appointment: Appointment; onEdit: (appointment: Appointment) => void; onCancel: (appointment: Appointment) => void }) {
+function AppointmentCard({ appointment, onEdit, onCancel, onStatus, onAddNote }: { appointment: Appointment; onEdit: (appointment: Appointment) => void; onCancel: (appointment: Appointment) => void; onStatus: (appointment: Appointment) => void; onAddNote: (appointment: Appointment) => void }) {
   const start = new Date(appointment.starts_at);
-  const status = appointment.status === 'scheduled' ? 'מתוכננת' : appointment.status === 'completed' ? 'הושלמה' : 'בוטלה';
+  const status = appointment.status === 'scheduled' ? 'מתוכננת' : appointment.status === 'in_progress' ? 'בתהליך' : appointment.status === 'completed' ? 'הושלמה' : 'בוטלה';
+  const sortedNotes = [...appointment.appointment_notes].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   return <article className="appointment-card">
     <div className="appointment-time"><strong>{timeFormatter.format(start)}</strong><span>{dateFormatter.format(start)}</span></div>
-    <div className="appointment-main"><div className="appointment-title"><strong>{appointment.customers?.full_name ?? 'לקוח לא ידוע'}</strong><span className={`status status-${appointment.status}`}>{status}</span></div><div>{appointment.job_types?.name ?? 'סוג עבודה לא הוגדר'} · {appointment.duration_minutes} דקות</div>{appointment.customer_addresses && <div className="muted">{appointment.customer_addresses.label}: {appointment.customer_addresses.address}{appointment.customer_addresses.city ? `, ${appointment.customer_addresses.city}` : ''}</div>}{appointment.notes && <div className="appointment-notes">{appointment.notes}</div>}{appointment.status === 'cancelled' && appointment.cancellation_reason && <div className="cancellation-reason"><strong>סיבת ביטול:</strong> {appointment.cancellation_reason}</div>}</div>
-    <div className="appointment-side"><div className="appointment-price">{new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS' }).format(appointment.price)}</div>{appointment.status === 'scheduled' && <div className="appointment-actions"><button className="btn" onClick={() => onEdit(appointment)}>עריכה</button><button className="link-button danger-text" onClick={() => onCancel(appointment)}>ביטול פגישה</button></div>}</div>
+    <div className="appointment-main"><div className="appointment-title"><strong>{appointment.customers?.full_name ?? 'לקוח לא ידוע'}</strong><span className={`status status-${appointment.status}`}>{status}</span></div><div>{appointment.job_types?.name ?? 'סוג עבודה לא הוגדר'} · {appointment.duration_minutes} דקות</div>{appointment.customer_addresses && <div className="muted">{appointment.customer_addresses.label}: {appointment.customer_addresses.address}{appointment.customer_addresses.city ? `, ${appointment.customer_addresses.city}` : ''}</div>}{appointment.started_at && <div className="workflow-time">התחילה: {new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', dateStyle: 'short', timeStyle: 'short' }).format(new Date(appointment.started_at))}</div>}{appointment.completed_at && <div className="workflow-time">הושלמה: {new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', dateStyle: 'short', timeStyle: 'short' }).format(new Date(appointment.completed_at))}</div>}{appointment.notes && <div className="appointment-notes">{appointment.notes}</div>}{sortedNotes.length > 0 && <div className="appointment-note-list">{sortedNotes.map(note => <div key={note.id}><span>{note.note_type === 'research' ? 'מחקר' : 'סיכום פגישה'}</span><time>{new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', dateStyle: 'short', timeStyle: 'short' }).format(new Date(note.created_at))}</time><p>{note.body}</p></div>)}</div>}{appointment.status === 'cancelled' && appointment.cancellation_reason && <div className="cancellation-reason"><strong>סיבת ביטול:</strong> {appointment.cancellation_reason}</div>}</div>
+    <div className="appointment-side"><div className="appointment-price">{new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS' }).format(appointment.price)}</div>{appointment.status !== 'cancelled' && <div className="appointment-actions">{appointment.status === 'scheduled' && <><button className="btn" onClick={() => onEdit(appointment)}>עריכה</button><button className="btn btn-primary" onClick={() => onStatus(appointment)}>התחלת פגישה</button></>}{appointment.status === 'in_progress' && <button className="btn btn-primary" onClick={() => onStatus(appointment)}>סיום פגישה</button>}<button className="btn" onClick={() => onAddNote(appointment)}>+ הערה</button>{appointment.status === 'scheduled' && <button className="link-button danger-text" onClick={() => onCancel(appointment)}>ביטול פגישה</button>}</div>}</div>
   </article>;
 }
 
@@ -72,6 +75,10 @@ export default function CalendarPage() {
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<Appointment | null>(null);
   const [cancelReason, setCancelReason] = useState('');
+  const [noteAppointment, setNoteAppointment] = useState<Appointment | null>(null);
+  const [noteType, setNoteType] = useState<'research' | 'meeting_summary'>('research');
+  const [noteBody, setNoteBody] = useState('');
+  const [noteError, setNoteError] = useState('');
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressForm, setAddressForm] = useState({ label: '', address: '', city: '', latitude: null as number | null, longitude: null as number | null });
   const [show, setShow] = useState(false);
@@ -92,7 +99,7 @@ export default function CalendarPage() {
       const [customerResult, jobResult, appointmentResult] = await Promise.all([
         db.from('customers').select('id,full_name,phone,updated_at,customer_addresses!address_customer_organization_fk(id,label,address,city,latitude,longitude)').order('updated_at', { ascending: false }),
         db.from('job_types').select('id,name,default_price,default_duration_minutes,description').eq('active', true).order('name'),
-        db.from('appointments').select('id,customer_id,customer_address_id,job_type_id,starts_at,duration_minutes,price,status,notes,cancellation_reason,customers!appointment_customer_organization_fk(full_name,phone),customer_addresses!appointment_address_customer_organization_fk(label,address,city,latitude,longitude),job_types!appointment_job_organization_fk(name)').order('starts_at'),
+        db.from('appointments').select('id,customer_id,customer_address_id,job_type_id,starts_at,duration_minutes,price,status,notes,cancellation_reason,started_at,completed_at,customers!appointment_customer_organization_fk(full_name,phone),customer_addresses!appointment_address_customer_organization_fk(label,address,city,latitude,longitude),job_types!appointment_job_organization_fk(name),appointment_notes!appointment_notes_appointment_organization_fk(id,note_type,body,created_at)').order('starts_at'),
       ]);
       if (customerResult.error || jobResult.error || appointmentResult.error) throw new Error('Load failed');
       setCustomers((customerResult.data ?? []) as CalendarCustomer[]);
@@ -112,8 +119,8 @@ export default function CalendarPage() {
   }, [customers, customerSearch]);
   const todayInIsrael = israelInputValues(new Date().toISOString()).date;
   const [now] = useState(() => Date.now());
-  const upcoming = useMemo(() => appointments.filter(item => item.status === 'scheduled' && new Date(item.starts_at).getTime() >= now), [appointments, now]);
-  const history = useMemo(() => appointments.filter(item => item.status !== 'scheduled' || new Date(item.starts_at).getTime() < now).sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime()), [appointments, now]);
+  const upcoming = useMemo(() => appointments.filter(item => item.status === 'in_progress' || (item.status === 'scheduled' && new Date(item.starts_at).getTime() >= now)), [appointments, now]);
+  const history = useMemo(() => appointments.filter(item => item.status === 'completed' || item.status === 'cancelled' || (item.status === 'scheduled' && new Date(item.starts_at).getTime() < now)).sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime()), [appointments, now]);
   const weekStart = weekStartFor(focusDate);
   const weekDates = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
   const appointmentsOn = (date: string) => appointments.filter(item => israelInputValues(item.starts_at).date === date);
@@ -175,6 +182,38 @@ export default function CalendarPage() {
     } catch { setError('ביטול הפגישה נכשל. נסו שוב.'); }
     finally { saveLock.current = false; setSaving(false); }
   }
+  async function advanceAppointment(appointment: Appointment) {
+    if (saveLock.current || (appointment.status !== 'scheduled' && appointment.status !== 'in_progress')) return;
+    const nextStatus = appointment.status === 'scheduled' ? 'in_progress' : 'completed';
+    const nowIso = new Date().toISOString();
+    saveLock.current = true; setSaving(true); setError(''); setMessage('');
+    try {
+      const values = nextStatus === 'in_progress'
+        ? { status: nextStatus, started_at: nowIso }
+        : { status: nextStatus, completed_at: nowIso };
+      const { error } = await getSupabase().from('appointments').update(values).eq('id', appointment.id).eq('status', appointment.status).select('id').single();
+      if (error) throw error;
+      setMessage(nextStatus === 'in_progress' ? 'הפגישה סומנה כפעילה.' : 'הפגישה הושלמה.');
+      await load();
+    } catch { setError('עדכון מצב הפגישה נכשל. רעננו ונסו שוב.'); }
+    finally { saveLock.current = false; setSaving(false); }
+  }
+  function openNote(appointment: Appointment) {
+    setNoteAppointment(appointment); setNoteType('research'); setNoteBody(''); setNoteError(''); setMessage('');
+  }
+  async function saveNote(e: React.FormEvent) {
+    e.preventDefault();
+    if (!noteAppointment || saveLock.current) return;
+    if (!noteBody.trim()) { setNoteError('יש לכתוב הערה לפני השמירה.'); return; }
+    saveLock.current = true; setSaving(true); setNoteError(''); setError('');
+    try {
+      const { error } = await getSupabase().from('appointment_notes').insert({ appointment_id: noteAppointment.id, note_type: noteType, body: noteBody.trim() }).select('id').single();
+      if (error) throw error;
+      setNoteAppointment(null); setNoteBody(''); setMessage('ההערה נוספה לפגישה.');
+      await load();
+    } catch { setNoteError('שמירת ההערה נכשלה. בדקו את החיבור ונסו שוב.'); }
+    finally { saveLock.current = false; setSaving(false); }
+  }
   async function saveAppointment(e: React.FormEvent) {
     e.preventDefault(); if (saveLock.current) return;
     const nextErrors: Record<string, string> = {};
@@ -219,10 +258,11 @@ export default function CalendarPage() {
       <label className="full">הערות לפגישה<textarea className="input" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label>
     </fieldset>{showAddressForm && selectedCustomer && <div className="modal-backdrop"><section className="inline-address-form modal-card"><h3>כתובת חדשה עבור {selectedCustomer.full_name}</h3><div className="form-grid"><label>שם הכתובת <span className="optional">(אופציונלי)</span><input className="input" value={addressForm.label} onChange={e => setAddressForm({ ...addressForm, label: e.target.value })} /></label><label>עיר<input className="input" aria-invalid={!!fieldErrors.modalCity} required value={addressForm.city} onChange={e => { setAddressForm({ ...addressForm, city: e.target.value, latitude: null, longitude: null }); setFieldErrors(current => ({ ...current, modalCity: '' })); setFormError(''); }} /><FieldError message={fieldErrors.modalCity} /></label><label className="full">כתובת<input className="input" aria-invalid={!!fieldErrors.modalAddress} required value={addressForm.address} onChange={e => { setAddressForm({ ...addressForm, address: e.target.value, latitude: null, longitude: null }); setFieldErrors(current => ({ ...current, modalAddress: '' })); setFormError(''); }} /><FieldError message={fieldErrors.modalAddress} /></label><AddressVerification address={addressForm.address} city={addressForm.city} latitude={addressForm.latitude} longitude={addressForm.longitude} onChange={location => { setAddressForm(current => ({ ...current, latitude: location?.latitude ?? null, longitude: location?.longitude ?? null })); setFieldErrors(current => ({ ...current, modalLocation: '' })); setFormError(''); }} /><FieldError message={fieldErrors.modalLocation} /></div><button className="btn" type="button" disabled={saving} onClick={saveAddress}>שמור ובחר כתובת</button></section></div>}<div className="toolbar form-actions"><button className="btn btn-primary" disabled={saving}>{saving ? 'שומר…' : editing ? 'שמור שינויים' : 'שמור פגישה'}</button><SaveError message={formError} /><button className="btn" type="button" disabled={saving} onClick={() => { setShow(false); setEditing(null); setFormError(''); setFieldErrors({}); }}>ביטול</button></div></form>}
     {confirmCancel && <section className="card delete-confirm" role="alertdialog" aria-labelledby="cancel-meeting-title"><h2 className="section-title" id="cancel-meeting-title">לבטל את הפגישה עם {confirmCancel.customers?.full_name}?</h2><p>הפגישה תישאר בהיסטוריה עם סטטוס “בוטלה”.</p><label>סיבת ביטול <span className="optional">(אופציונלי)</span><textarea className="input" value={cancelReason} onChange={e => setCancelReason(e.target.value)} /></label><div className="toolbar" style={{ marginTop: 14 }}><button className="btn btn-danger" disabled={saving} onClick={cancelAppointment}>{saving ? 'מבטל…' : 'כן, לבטל פגישה'}</button><button className="btn" disabled={saving} onClick={() => setConfirmCancel(null)}>חזרה</button></div></section>}
+    {noteAppointment && <div className="modal-backdrop"><form noValidate className="card modal-card note-form" onSubmit={saveNote} role="dialog" aria-modal="true" aria-labelledby="note-title"><h2 className="section-title" id="note-title">הערה לפגישה עם {noteAppointment.customers?.full_name}</h2><label>סוג ההערה<select className="input" value={noteType} onChange={e => setNoteType(e.target.value as 'research' | 'meeting_summary')}><option value="research">מחקר</option><option value="meeting_summary">סיכום פגישה</option></select></label><label>תוכן<textarea autoFocus className="input" aria-invalid={!!noteError} value={noteBody} onChange={e => { setNoteBody(e.target.value); setNoteError(''); }} /><FieldError message={noteError} /></label><div className="toolbar form-actions"><button className="btn btn-primary" disabled={saving}>{saving ? 'שומר…' : 'שמירת הערה'}</button><SaveError message={noteError} /><button className="btn" type="button" disabled={saving} onClick={() => setNoteAppointment(null)}>ביטול</button></div></form></div>}
     <div className="calendar-controls card"><div className="view-tabs">{([['agenda','רשימה'],['day','יום'],['week','שבוע']] as [CalendarView,string][]).map(([value,label]) => <button key={value} className={`view-tab ${calendarView === value ? 'active' : ''}`} onClick={() => setCalendarView(value)}>{label}</button>)}</div>{calendarView !== 'agenda' && <div className="date-navigation"><button className="btn" onClick={() => setFocusDate(addDays(focusDate, calendarView === 'week' ? -7 : -1))}>הקודם</button><button className="btn" onClick={() => setFocusDate(todayInIsrael)}>היום</button><strong>{calendarView === 'day' ? dateFormatter.format(new Date(israelLocalToIso(focusDate, '12:00'))) : `שבוע שמתחיל ${weekStart}`}</strong><button className="btn" onClick={() => setFocusDate(addDays(focusDate, calendarView === 'week' ? 7 : 1))}>הבא</button></div>}</div>
     {loading ? <p role="status">טוען פגישות…</p> : calendarView === 'agenda' ? <div className="calendar-sections">
-      <section><div className="section-heading"><h2>פגישות קרובות</h2><span className="count-pill">{upcoming.length}</span></div>{upcoming.length ? <div className="appointment-list">{upcoming.map(item => <AppointmentCard appointment={item} onEdit={openEdit} onCancel={appointment => { setShow(false); setEditing(null); setConfirmCancel(appointment); setMessage(''); setError(''); }} key={item.id} />)}</div> : <div className="card empty-state">אין פגישות עתידיות.</div>}</section>
-      <section><div className="section-heading"><h2>היסטוריה</h2><span className="count-pill">{history.length}</span></div>{history.length ? <div className="appointment-list">{history.map(item => <AppointmentCard appointment={item} onEdit={openEdit} onCancel={appointment => { setShow(false); setEditing(null); setConfirmCancel(appointment); setMessage(''); setError(''); }} key={item.id} />)}</div> : <div className="card empty-state">עדיין אין פגישות קודמות.</div>}</section>
-    </div> : calendarView === 'day' ? <section className="day-view"><div><div className="section-heading"><h2>מסלול ליום הנבחר</h2><span className="count-pill">{dayRouteStops.length}</span></div><DayRouteMap stops={dayRouteStops} /></div><div><div className="section-heading"><h2>פגישות ביום הנבחר</h2><span className="count-pill">{dayAppointments.length}</span></div>{dayAppointments.length ? <div className="appointment-list">{dayAppointments.map(item => <AppointmentCard appointment={item} onEdit={openEdit} onCancel={appointment => { setConfirmCancel(appointment); setCancelReason(''); }} key={item.id} />)}</div> : <div className="card empty-state">אין פגישות ביום הזה.</div>}</div></section> : <div className="week-grid">{weekDates.map(date => <section className={`week-day ${date === todayInIsrael ? 'today' : ''}`} key={date}><div className="week-day-heading"><strong>{new Intl.DateTimeFormat('he-IL', { weekday: 'short', day: 'numeric', month: 'numeric' }).format(new Date(`${date}T12:00:00Z`))}</strong><span className="count-pill">{appointmentsOn(date).length}</span></div>{appointmentsOn(date).length ? appointmentsOn(date).map(item => <button className="week-appointment" key={item.id} onClick={() => item.status === 'scheduled' && openEdit(item)}><strong>{timeFormatter.format(new Date(item.starts_at))}</strong><span>{item.customers?.full_name}</span><small>{item.job_types?.name}</small></button>) : <div className="week-empty">אין פגישות</div>}</section>)}</div>}
+      <section><div className="section-heading"><h2>פגישות קרובות</h2><span className="count-pill">{upcoming.length}</span></div>{upcoming.length ? <div className="appointment-list">{upcoming.map(item => <AppointmentCard appointment={item} onEdit={openEdit} onCancel={appointment => { setShow(false); setEditing(null); setConfirmCancel(appointment); setMessage(''); setError(''); }} onStatus={advanceAppointment} onAddNote={openNote} key={item.id} />)}</div> : <div className="card empty-state">אין פגישות עתידיות.</div>}</section>
+      <section><div className="section-heading"><h2>היסטוריה</h2><span className="count-pill">{history.length}</span></div>{history.length ? <div className="appointment-list">{history.map(item => <AppointmentCard appointment={item} onEdit={openEdit} onCancel={appointment => { setShow(false); setEditing(null); setConfirmCancel(appointment); setMessage(''); setError(''); }} onStatus={advanceAppointment} onAddNote={openNote} key={item.id} />)}</div> : <div className="card empty-state">עדיין אין פגישות קודמות.</div>}</section>
+    </div> : calendarView === 'day' ? <section className="day-view"><div><div className="section-heading"><h2>מסלול ליום הנבחר</h2><span className="count-pill">{dayRouteStops.length}</span></div><DayRouteMap stops={dayRouteStops} /></div><div><div className="section-heading"><h2>פגישות ביום הנבחר</h2><span className="count-pill">{dayAppointments.length}</span></div>{dayAppointments.length ? <div className="appointment-list">{dayAppointments.map(item => <AppointmentCard appointment={item} onEdit={openEdit} onCancel={appointment => { setConfirmCancel(appointment); setCancelReason(''); }} onStatus={advanceAppointment} onAddNote={openNote} key={item.id} />)}</div> : <div className="card empty-state">אין פגישות ביום הזה.</div>}</div></section> : <div className="week-grid">{weekDates.map(date => <section className={`week-day ${date === todayInIsrael ? 'today' : ''}`} key={date}><div className="week-day-heading"><strong>{new Intl.DateTimeFormat('he-IL', { weekday: 'short', day: 'numeric', month: 'numeric' }).format(new Date(`${date}T12:00:00Z`))}</strong><span className="count-pill">{appointmentsOn(date).length}</span></div>{appointmentsOn(date).length ? appointmentsOn(date).map(item => <button className="week-appointment" key={item.id} onClick={() => item.status === 'scheduled' && openEdit(item)}><strong>{timeFormatter.format(new Date(item.starts_at))}</strong><span>{item.customers?.full_name}</span><small>{item.job_types?.name}</small></button>) : <div className="week-empty">אין פגישות</div>}</section>)}</div>}
   </>;
 }

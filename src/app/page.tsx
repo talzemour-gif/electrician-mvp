@@ -6,7 +6,7 @@ import { getSupabase } from '@/lib/supabase';
 const DayRouteMap = dynamic(() => import('@/components/day-route-map'), { ssr: false });
 
 type DashboardAppointment = {
-  id: string; starts_at: string; status: 'scheduled' | 'completed' | 'cancelled';
+  id: string; starts_at: string; status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   customers: { full_name: string } | null;
   customer_addresses: { address: string; city: string | null; latitude: number | null; longitude: number | null } | null;
 };
@@ -28,9 +28,9 @@ export default function HomePage() {
       const db = getSupabase();
       const results = await Promise.all([
         db.from('customers').select('id', { count: 'exact', head: true }),
-        db.from('appointments').select('id', { count: 'exact', head: true }).eq('status', 'scheduled'),
+        db.from('appointments').select('id', { count: 'exact', head: true }).in('status', ['scheduled', 'in_progress']),
         db.from('job_types').select('id', { count: 'exact', head: true }).eq('active', true),
-        db.from('appointments').select('id,starts_at,status,customers!appointment_customer_organization_fk(full_name),customer_addresses!appointment_address_customer_organization_fk(address,city,latitude,longitude)').eq('status', 'scheduled').order('starts_at'),
+        db.from('appointments').select('id,starts_at,status,customers!appointment_customer_organization_fk(full_name),customer_addresses!appointment_address_customer_organization_fk(address,city,latitude,longitude)').in('status', ['scheduled', 'in_progress']).order('starts_at'),
       ]);
       if (results.some(result => result.error)) throw new Error('Unable to load dashboard');
       setStats({ customers: results[0].count ?? 0, appointments: results[1].count ?? 0, jobs: results[2].count ?? 0 });

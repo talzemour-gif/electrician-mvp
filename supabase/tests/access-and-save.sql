@@ -27,7 +27,7 @@ values (current_setting('test.org_b')::uuid, 'Tenant B private customer', '222')
 select set_config('request.jwt.claim.sub', current_setting('test.admin_a'), true);
 set local role authenticated;
 do $$
-declare c uuid; n integer;
+declare c uuid; a uuid; n integer;
 begin
   if public.current_organization_id() <> current_setting('test.org_a')::uuid then raise exception 'Wrong current organization'; end if;
   if (select count(*) from public.organizations) <> 1 then raise exception 'Organization isolation failed'; end if;
@@ -39,6 +39,26 @@ begin
   if not exists(select 1 from public.customer_addresses where customer_id = c and address = 'Test address' and organization_id = current_setting('test.org_a')::uuid) then raise exception 'Address not saved in tenant'; end if;
   update public.customers set notes = 'Updated notes' where id = c;
   if not exists(select 1 from public.customers where id = c and notes = 'Updated notes') then raise exception 'Update failed'; end if;
+
+  insert into public.appointments(customer_id, customer_address_id, job_type_id, starts_at, duration_minutes, price)
+  values (
+    c,
+    (select id from public.customer_addresses where customer_id = c limit 1),
+    (select id from public.job_types where name = 'Shared service name' limit 1),
+    now() + interval '1 day', 30, 100
+  ) returning id into a;
+  update public.appointments set status = 'in_progress', started_at = now() where id = a and status = 'scheduled';
+  if not found then raise exception 'Appointment start transition failed'; end if;
+  insert into public.appointment_notes(appointment_id, note_type, body) values(a, 'research', 'Timestamped research note');
+  if not exists(select 1 from public.appointment_notes where appointment_id = a and created_by = current_setting('test.admin_a')::uuid) then raise exception 'Appointment note author or tenant assignment failed'; end if;
+  update public.appointments set status = 'completed', completed_at = now() where id = a and status = 'in_progress';
+  if not found then raise exception 'Appointment completion transition failed'; end if;
+  begin
+    insert into public.appointment_notes(organization_id, appointment_id, note_type, body)
+    values(current_setting('test.org_b')::uuid, a, 'meeting_summary', 'Cross tenant note');
+    raise exception 'Cross-tenant appointment note insert allowed';
+  exception when insufficient_privilege or foreign_key_violation then null;
+  end;
 
   select count(*) into n from public.customers;
   begin
@@ -119,4 +139,4 @@ end $$;
 reset role;
 
 rollback;
-select 'PASS: tenant isolation, tenant assignment, admin/staff permissions, atomic save, non-member and anonymous denial' as result;
+select 'PASS: tenant isolation, appointment workflow and notes, tenant assignment, admin/staff permissions, atomic save, non-member and anonymous denial' as result;

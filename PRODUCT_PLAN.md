@@ -52,7 +52,7 @@ The MVP already includes:
 
 **Goal:** Cover the minimum workflow needed to operate the business in the system.
 
-1. Add an on-site completion flow. When the electrician finishes the work, the appointment can be marked completed and the completion time and relevant notes are recorded.
+1. Add an on-site completion flow. When work begins, the appointment can be marked in progress; when it finishes, it can be marked completed. Start/completion times and any number of timestamped research or meeting-summary notes are recorded. **Implemented 2026-09-17.**
 2. Add payment status tracking, such as unpaid, partially paid, and paid. This tracks payment state only; collecting money inside the application is out of scope.
 3. Add a contact source to customers or leads, such as referral, Google, returning customer, or another source.
 4. Create a clear customer history combining appointments, status changes, addresses, notes, and relevant communication events.

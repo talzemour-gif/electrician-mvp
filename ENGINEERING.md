@@ -131,7 +131,11 @@ Stores service names, default price, default duration, description/notes, and ac
 
 ### `appointments`
 
-References a customer, customer address, and service. It stores the scheduled instant as `timestamptz`, copied duration and price, status (`scheduled`, `completed`, or `cancelled`), notes, optional `cancellation_reason`, and a reschedule counter.
+References a customer, customer address, and service. It stores the scheduled instant as `timestamptz`, copied duration and price, status (`scheduled`, `in_progress`, `completed`, or `cancelled`), `started_at` and `completed_at` workflow timestamps, legacy notes, optional `cancellation_reason`, and a reschedule counter.
+
+### `appointment_notes`
+
+Stores any number of timestamped notes for an appointment. Each note is classified as `research` or `meeting_summary`, records its author through `created_by`, and is tenant-isolated with an organization-consistent appointment foreign key. Members may add and update notes; only organization admins may delete them. The records are designed to appear in the customer timeline in a later Phase 2 change.
 
 ### `appointment_reschedules`
 
@@ -206,6 +210,7 @@ Current migration order:
 7. `202609150001_member_roles.sql` — admin/staff roles and admin-only database deletion policies.
 8. `202609170001_multi_tenancy.sql` — organizations, tenant ownership, composite integrity constraints, and tenant-scoped RLS.
 9. `202609170002_remove_redundant_tenant_foreign_keys.sql` — removes the superseded single-column relationships so tenant-safe PostgREST embeds are unambiguous, including for empty organizations.
+10. `202609170003_appointment_completion_notes.sql` — adds the in-progress/completed workflow timestamps and tenant-isolated, timestamped appointment notes.
 
 The hosted project was initialized manually through the Supabase SQL Editor. Those applications are not registered in Supabase CLI migration history. Reconcile the hosted baseline before adopting `supabase db push`; do not replay the initial migration blindly.
 
