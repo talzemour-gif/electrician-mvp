@@ -58,6 +58,8 @@ The MVP already includes:
 4. Create a clear customer history combining appointments, status changes, addresses, notes, and relevant communication events.
 5. Create a clear appointment history, including creation, rescheduling, cancellation, completion, and payment-status changes.
 6. Define and test a data export and backup procedure, including how data can be restored.
+7. Allow staff to add notes while an appointment is in progress and after it is completed. Keep these notes attached to the appointment and visible in the customer's history.
+8. Allow staff to record research or professional work completed for a customer between appointments. Store the author and timestamp and show the entry in the customer's history without requiring an appointment.
 
 **Success measure:** Staff can understand the current state and history of every customer and appointment without relying on separate notes.
 
@@ -82,7 +84,11 @@ The MVP already includes:
 3. Create staff-reviewed message templates using customer and appointment information.
 4. Add WhatsApp sending through an approved business integration.
 5. Record outgoing messages, delivery state where available, consent, and communication history.
-6. Add AI assistance later for extracting details and drafting replies, with staff approval before messages, prices, or appointments are committed.
+6. Let each organization configure its own optional Google Form link for customer intake. The organization chooses whether completion is required before every appointment or only before the customer's first appointment.
+7. Track form requests and completion per customer and appointment. When a required response is missing, show a clear warning on upcoming calendar appointments so staff can act before the meeting.
+8. Keep form configuration, request status, and response references private to the relevant organization through the same tenant-isolation rules used by other business data.
+9. After an appointment is completed, optionally send a follow-up message such as “How are you feeling after the last treatment?” The organization can enable or disable this workflow, edit its template, and choose whether each message is sent automatically or requires staff approval.
+10. Add AI assistance later for extracting details and drafting replies, with staff approval before messages, prices, or appointments are committed.
 
 **Success measure:** Staff can handle common customer communication from the system with less manual copying and typing.
 
@@ -154,6 +160,10 @@ Payment **status tracking** remains in scope because staff need to know whether 
 - What information must appear in customer and appointment history?
 - Which data should be exportable, how often should backups run, and who may restore them?
 - Which WhatsApp messages should be automatic drafts and which must always be written manually?
+- Does each organization require its intake form before the first appointment only, before every appointment, or not at all?
+- How will form completion be verified: a staff checkbox, a Google Forms response integration, or both?
+- How long after a completed appointment should an optional follow-up message be sent, and should staff approve it first?
+- Who may read and edit appointment notes and between-appointment research entries?
 - Which appointments are flexible, and by how many hours or days?
 - What is an acceptable maximum travel time between jobs?
 - Which geographic areas should be served or rejected?

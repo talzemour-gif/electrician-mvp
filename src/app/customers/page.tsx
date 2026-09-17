@@ -35,7 +35,7 @@ export default function CustomersPage() {
     setLoading(true); setError('');
     try {
       const { data, error } = await getSupabase().from('customers')
-        .select('id, full_name, phone, notes, customer_addresses(id,label,address,city,latitude,longitude), appointments(starts_at,status)')
+        .select('id, full_name, phone, notes, customer_addresses!address_customer_organization_fk(id,label,address,city,latitude,longitude), appointments!appointment_customer_organization_fk(starts_at,status)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       const nextCustomers = data ?? [];

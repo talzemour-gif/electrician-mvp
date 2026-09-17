@@ -90,9 +90,9 @@ export default function CalendarPage() {
     try {
       const db = getSupabase();
       const [customerResult, jobResult, appointmentResult] = await Promise.all([
-        db.from('customers').select('id,full_name,phone,updated_at,customer_addresses(id,label,address,city,latitude,longitude)').order('updated_at', { ascending: false }),
+        db.from('customers').select('id,full_name,phone,updated_at,customer_addresses!address_customer_organization_fk(id,label,address,city,latitude,longitude)').order('updated_at', { ascending: false }),
         db.from('job_types').select('id,name,default_price,default_duration_minutes,description').eq('active', true).order('name'),
-        db.from('appointments').select('id,customer_id,customer_address_id,job_type_id,starts_at,duration_minutes,price,status,notes,cancellation_reason,customers(full_name,phone),customer_addresses(label,address,city,latitude,longitude),job_types(name)').order('starts_at'),
+        db.from('appointments').select('id,customer_id,customer_address_id,job_type_id,starts_at,duration_minutes,price,status,notes,cancellation_reason,customers!appointment_customer_organization_fk(full_name,phone),customer_addresses!appointment_address_customer_organization_fk(label,address,city,latitude,longitude),job_types!appointment_job_organization_fk(name)').order('starts_at'),
       ]);
       if (customerResult.error || jobResult.error || appointmentResult.error) throw new Error('Load failed');
       setCustomers((customerResult.data ?? []) as CalendarCustomer[]);

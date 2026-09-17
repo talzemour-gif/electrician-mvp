@@ -30,7 +30,7 @@ export default function HomePage() {
         db.from('customers').select('id', { count: 'exact', head: true }),
         db.from('appointments').select('id', { count: 'exact', head: true }).eq('status', 'scheduled'),
         db.from('job_types').select('id', { count: 'exact', head: true }).eq('active', true),
-        db.from('appointments').select('id,starts_at,status,customers(full_name),customer_addresses(address,city,latitude,longitude)').eq('status', 'scheduled').order('starts_at'),
+        db.from('appointments').select('id,starts_at,status,customers!appointment_customer_organization_fk(full_name),customer_addresses!appointment_address_customer_organization_fk(address,city,latitude,longitude)').eq('status', 'scheduled').order('starts_at'),
       ]);
       if (results.some(result => result.error)) throw new Error('Unable to load dashboard');
       setStats({ customers: results[0].count ?? 0, appointments: results[1].count ?? 0, jobs: results[2].count ?? 0 });

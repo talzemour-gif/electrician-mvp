@@ -141,6 +141,19 @@ Append-only scheduling history. The appointment update trigger increments `resch
 
 Reserved for working-hours and availability planning. The table exists, but the current UI does not use it.
 
+## Planned intake, clinical notes, and follow-up architecture
+
+The product plan includes organization-specific customer intake and follow-up workflows. This section records the intended boundaries; these tables and integrations have not been implemented yet.
+
+- Store form configuration per organization, including the Google Form URL, whether it is active, and whether it is required before the first appointment or every appointment. Never place a global form URL in application configuration.
+- Store each form request/completion record against its organization, customer, and, when applicable, appointment. Calendar warnings should be derived from the organization's rule and recorded completion state rather than inferred from a link click.
+- Google Forms links may be sent through the planned WhatsApp integration. Direct response verification requires a separate Google integration; until that exists, staff need an explicit way to mark a response as received.
+- Store notes made during or after a meeting on the appointment or in an appointment-note table with author and timestamps. Treat these as organization-owned customer data and include them in customer history.
+- Store research performed between appointments as a separate customer timeline entry with organization, customer, author, content, and timestamps. It must not require a related appointment.
+- Store follow-up message rules and templates per organization. A completed appointment may create a scheduled follow-up communication record, subject to the organization's automatic-send or staff-approval setting.
+- Every new table in this workflow must have a mandatory `organization_id`, tenant-scoped RLS, and organization-consistent foreign keys. Access must follow the existing admin/staff membership model. Do not expose one organization's forms, notes, research, templates, or message history to another organization.
+- Form responses and treatment notes may contain sensitive personal or health information. Define data minimization, retention, access, export, and deletion behavior before implementing the sports-therapy workflow.
+
 ## Database functions and triggers
 
 - `create_customer`: legacy atomic customer plus optional first-address creation.
@@ -192,6 +205,7 @@ Current migration order:
 6. `202609140002_coordinate_pair_constraint.sql` — strict coordinate-pair constraint correction after manual deployment.
 7. `202609150001_member_roles.sql` — admin/staff roles and admin-only database deletion policies.
 8. `202609170001_multi_tenancy.sql` — organizations, tenant ownership, composite integrity constraints, and tenant-scoped RLS.
+9. `202609170002_remove_redundant_tenant_foreign_keys.sql` — removes the superseded single-column relationships so tenant-safe PostgREST embeds are unambiguous, including for empty organizations.
 
 The hosted project was initialized manually through the Supabase SQL Editor. Those applications are not registered in Supabase CLI migration history. Reconcile the hosted baseline before adopting `supabase db push`; do not replay the initial migration blindly.
 

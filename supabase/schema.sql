@@ -265,6 +265,13 @@ alter table public.appointments add constraint appointment_address_customer_orga
 alter table public.appointment_reschedules add constraint reschedule_appointment_organization_fk
   foreign key (appointment_id, organization_id) references public.appointments(id, organization_id) on delete cascade;
 
+-- The organization-aware foreign keys above replace the original single-column
+-- relationships. Removing the originals also keeps PostgREST embeds unambiguous.
+alter table public.customer_addresses drop constraint customer_addresses_customer_id_fkey;
+alter table public.appointments drop constraint appointments_customer_id_fkey;
+alter table public.appointments drop constraint appointments_job_type_id_fkey;
+alter table public.appointment_reschedules drop constraint appointment_reschedules_appointment_id_fkey;
+
 create index customers_organization_idx on public.customers(organization_id);
 create index customer_addresses_organization_idx on public.customer_addresses(organization_id);
 create index job_types_organization_idx on public.job_types(organization_id);
