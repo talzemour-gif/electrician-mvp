@@ -60,7 +60,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   }
   if (loading) return <p role="status">בודק התחברות…</p>;
   if (!session) return <section className="card auth-card">
-    <h1>כניסה למערכת</h1><p className="sub">כניסה לבודק החשמל ולצוות העסק</p>
+    <h1>כניסה למערכת</h1><p className="sub">כניסה מאובטחת לצוות העסק</p>
     <form onSubmit={login} className="auth-form">
       <label>אימייל<input className="input" type="email" dir="ltr" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} /></label>
       <label>סיסמה<input className="input" type="password" dir="ltr" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} /></label>

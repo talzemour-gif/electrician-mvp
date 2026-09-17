@@ -59,6 +59,9 @@ back. The final result must start with PASS.
 
 The initial schema and access checks were applied successfully to the hosted database.
 The browser client was also checked to receive permission denied for signed-out reads.
+The multi-tenant migration was applied on 2026-09-17. Its rollback-only isolation suite
+passed in the hosted database. A separate, empty sports-therapy test organization was created;
+it still requires an Auth user and `organization_members` row before it can be used.
 
 ## Current application scope
 

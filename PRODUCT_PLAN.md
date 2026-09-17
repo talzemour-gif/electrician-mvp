@@ -35,7 +35,7 @@ The MVP already includes:
 
 ### Phase 1.5 — Multi-tenant foundation
 
-**Status:** In progress (started 2026-09-17).
+**Status:** Foundation deployed (2026-09-17). The production migration and isolation tests passed, and the sports-therapy test workspace exists. Creating its administrator account and completing a two-account browser test remain.
 
 **Goal:** Let the electrician business and a sports-therapy business test the same application with completely separate data.
 
