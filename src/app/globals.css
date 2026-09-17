@@ -185,3 +185,4 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
   .day-route-stops { grid-row: 2; }
   .address-picker-map { height: 250px; }
 }
+.error-page { max-width: 620px; margin: 40px auto; }

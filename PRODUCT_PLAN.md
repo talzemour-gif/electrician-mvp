@@ -20,6 +20,8 @@ The MVP already includes:
 
 ### Phase 1 — Go live
 
+**Status:** Complete (2026-09-17). The application is deployed to Vercel, connected to Supabase, protected by staff membership and role-based deletion rules, usable on mobile and laptop, and covered by documented release, rollback, smoke-test, and basic error-monitoring procedures.
+
 **Goal:** Make the current system securely available to approved staff from their phones and laptops.
 
 1. Choose and configure the production hosting service.

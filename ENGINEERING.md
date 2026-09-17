@@ -1,6 +1,6 @@
 # Electrician MVP — Engineering Guide
 
-Last updated: 2026-09-14
+Last updated: 2026-09-17
 
 ## Purpose and current scope
 
@@ -57,6 +57,9 @@ src/
     calendar/page.tsx      Appointment workflows and calendar views
     api/day-route/route.ts Server-side daily geocoding and road routing
     api/address-lookup/route.ts Server-side address verification
+    api/client-error/route.ts Privacy-safe client failure logging
+    error.tsx              Recoverable route-level error screen
+    global-error.tsx       Root-layout failure screen
     customers/page.tsx     Customer and address workflows
     pricing/page.tsx       Service-type workflows
     globals.css            Shared application styles
@@ -77,6 +80,10 @@ supabase/
 
 Production deployment and rollback procedures are maintained in `DEPLOYMENT.md`.
 The live application is hosted at `https://electrician-mvp-khaki.vercel.app` and is deployed from the GitHub `main` branch through Vercel.
+
+## Production error handling
+
+`error.tsx` and `global-error.tsx` provide staff with a Hebrew recovery action when an unexpected render failure reaches a Next.js error boundary. They report only the failure digest, pathname, source, and timestamp to `POST /api/client-error`; do not add customer data, form values, full URLs, stack traces, or error messages to this payload. The API writes the structured event to the Vercel runtime log. Server-side map adapters log a short provider failure message without the requested address. See `DEPLOYMENT.md` for the operational log-review procedure.
 
 ## Runtime architecture
 

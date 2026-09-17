@@ -20,7 +20,8 @@ export async function POST(request: Request) {
     }
     const route = await calculateRoadRoute(points);
     return NextResponse.json({ points, missing, route });
-  } catch {
+  } catch (error) {
+    console.error('[day-route-error]', { message: error instanceof Error ? error.message : 'Unknown error' });
     return NextResponse.json({ error: 'Map services unavailable' }, { status: 502 });
   }
 }

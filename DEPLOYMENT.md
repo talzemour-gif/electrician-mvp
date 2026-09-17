@@ -48,6 +48,12 @@ These are the same public client values documented in `.env.example`. Never add 
 
 Remove production test records after validation if they are not useful business data.
 
+## Error monitoring
+
+Unexpected React rendering failures are caught by the route and global error boundaries. Staff see a Hebrew recovery screen, and the browser sends a small event to `POST /api/client-error`. The event contains only the page path, error digest, source, and timestamp; it must not contain customer or form data. Map API failures are logged by their server routes.
+
+Review these events in Vercel under the project's **Logs** view by filtering for `[client-error]`, `[day-route-error]`, or `[address-lookup-error]`. During the pilot, review logs after a reported problem and at least once at the end of each working day. Vercel Hobby log retention is limited, so this is basic pilot monitoring rather than permanent error storage.
+
 ## Routine release
 
 1. Review and commit the intended changes.

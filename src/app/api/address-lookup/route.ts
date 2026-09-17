@@ -9,7 +9,8 @@ export async function POST(request: Request) {
     }
     const point = await geocodeIsraeliAddress(`${address.trim()}, ${city.trim()}`);
     return point ? NextResponse.json(point) : NextResponse.json({ error: 'Address not found' }, { status: 404 });
-  } catch {
+  } catch (error) {
+    console.error('[address-lookup-error]', { message: error instanceof Error ? error.message : 'Unknown error' });
     return NextResponse.json({ error: 'Map service unavailable' }, { status: 502 });
   }
 }
