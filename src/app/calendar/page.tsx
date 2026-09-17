@@ -22,6 +22,9 @@ const emptyForm = { customerId: '', addressId: '', jobTypeId: '', date: '', time
 const dateFormatter = new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 const timeFormatter = new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 const partsFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+const mimeByExtension: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', heic: 'image/heic', heif: 'image/heif', mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', pdf: 'application/pdf', txt: 'text/plain', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
+const supportedMimes = new Set(Object.values(mimeByExtension));
+function normalizedMime(file: File) { return file.type.toLowerCase() || mimeByExtension[file.name.split('.').pop()?.toLowerCase() ?? ''] || ''; }
 
 function partsAt(date: Date) {
   return Object.fromEntries(partsFormatter.formatToParts(date).filter(part => part.type !== 'literal').map(part => [part.type, Number(part.value)]));
@@ -82,6 +85,8 @@ export default function CalendarPage() {
   const [noteUseInReport, setNoteUseInReport] = useState(false);
   const [noteMode, setNoteMode] = useState<'note' | 'completion'>('note');
   const [noteError, setNoteError] = useState('');
+  const [noteFileError, setNoteFileError] = useState('');
+  const [uploadProgress, setUploadProgress] = useState('');
   const [attachmentUrls, setAttachmentUrls] = useState<Record<string, string>>({});
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressForm, setAddressForm] = useState({ label: '', address: '', city: '', latitude: null as number | null, longitude: null as number | null });
@@ -210,10 +215,10 @@ export default function CalendarPage() {
     finally { saveLock.current = false; setSaving(false); }
   }
   function openNote(appointment: Appointment) {
-    setNoteAppointment(appointment); setNoteMode('note'); setNoteType('research'); setNoteBody(''); setNoteFiles([]); setNoteUseInReport(false); setNoteError(''); setMessage('');
+    setNoteAppointment(appointment); setNoteMode('note'); setNoteType('research'); setNoteBody(''); setNoteFiles([]); setNoteUseInReport(false); setNoteError(''); setNoteFileError(''); setUploadProgress(''); setMessage('');
   }
   function openCompletion(appointment: Appointment) {
-    setNoteAppointment(appointment); setNoteMode('completion'); setNoteType('meeting_summary'); setNoteBody(''); setNoteFiles([]); setNoteUseInReport(false); setNoteError(''); setMessage('');
+    setNoteAppointment(appointment); setNoteMode('completion'); setNoteType('meeting_summary'); setNoteBody(''); setNoteFiles([]); setNoteUseInReport(false); setNoteError(''); setNoteFileError(''); setUploadProgress(''); setMessage('');
   }
   async function completeAppointment(appointment: Appointment) {
     const { error } = await getSupabase().from('appointments').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', appointment.id).eq('status', 'in_progress').select('id').single();
@@ -228,30 +233,43 @@ export default function CalendarPage() {
     } catch { setNoteError('סיום הפגישה נכשל. רעננו ונסו שוב.'); }
     finally { saveLock.current = false; setSaving(false); }
   }
+  function selectNoteFiles(files: File[]) {
+    setNoteFiles(files); setNoteError(''); setNoteFileError('');
+    if (files.length > 5) { setNoteFileError('אפשר לצרף עד 5 קבצים להערה.'); setNoteError('לא ניתן לשמור. בדקו את הקבצים המצורפים.'); return; }
+    const oversized = files.find(file => file.size > 50 * 1024 * 1024);
+    if (oversized) { setNoteFileError(`הקובץ ${oversized.name} גדול מ־50 MB.`); setNoteError('לא ניתן לשמור. בדקו את הקבצים המצורפים.'); return; }
+    const unsupported = files.find(file => !supportedMimes.has(normalizedMime(file)));
+    if (unsupported) { setNoteFileError(`סוג הקובץ ${unsupported.name} אינו נתמך.`); setNoteError('לא ניתן לשמור. בדקו את הקבצים המצורפים.'); }
+  }
   async function saveNote(e: React.FormEvent) {
     e.preventDefault();
     if (!noteAppointment || saveLock.current) return;
     if (!noteBody.trim() && !noteFiles.length) { setNoteError('יש לכתוב הערה או לצרף קובץ אחד לפחות.'); return; }
-    if (noteFiles.length > 5) { setNoteError('אפשר לצרף עד 5 קבצים להערה.'); return; }
-    if (noteFiles.some(file => file.size > 50 * 1024 * 1024)) { setNoteError('כל קובץ חייב להיות קטן מ־50 MB.'); return; }
-    saveLock.current = true; setSaving(true); setNoteError(''); setError('');
+    if (noteFiles.length > 5) { setNoteFileError('אפשר לצרף עד 5 קבצים להערה.'); setNoteError('לא ניתן לשמור. בדקו את הקבצים המצורפים.'); return; }
+    if (noteFiles.some(file => file.size > 50 * 1024 * 1024)) { setNoteFileError('כל קובץ חייב להיות קטן מ־50 MB.'); setNoteError('לא ניתן לשמור. בדקו את הקבצים המצורפים.'); return; }
+    const unsupported = noteFiles.find(file => !supportedMimes.has(normalizedMime(file)));
+    if (unsupported) { setNoteFileError(`סוג הקובץ ${unsupported.name} אינו נתמך.`); setNoteError('לא ניתן לשמור. בדקו את הקבצים המצורפים.'); return; }
+    saveLock.current = true; setSaving(true); setNoteError(''); setNoteFileError(''); setUploadProgress(''); setError('');
     try {
       const db = getSupabase();
       const noteId = crypto.randomUUID();
-      const { error } = await db.from('appointment_notes').insert({ id: noteId, appointment_id: noteAppointment.id, note_type: noteType, body: noteBody.trim() || null, use_in_final_report: noteUseInReport }).select('id').single();
-      if (error) throw error;
+      const attachments: { note_id: string; storage_path: string; file_name: string; mime_type: string; size_bytes: number }[] = [];
       for (const file of noteFiles) {
+        setUploadProgress(`מעלה ${attachments.length + 1} מתוך ${noteFiles.length}: ${file.name}`);
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, '-');
         const storagePath = `${noteAppointment.organization_id}/${noteAppointment.id}/${noteId}/${crypto.randomUUID()}-${safeName}`;
-        const { error: uploadError } = await db.storage.from('appointment-files').upload(storagePath, file, { contentType: file.type || 'application/octet-stream', upsert: false });
-        if (uploadError) throw uploadError;
-        const { error: attachmentError } = await db.from('appointment_note_attachments').insert({ note_id: noteId, storage_path: storagePath, file_name: file.name, mime_type: file.type || 'application/octet-stream', size_bytes: file.size });
-        if (attachmentError) throw attachmentError;
+        const mimeType = normalizedMime(file);
+        const { error: uploadError } = await db.storage.from('appointment-files').upload(storagePath, file, { contentType: mimeType, upsert: false });
+        if (uploadError) throw new Error(`UPLOAD:${file.name}`);
+        attachments.push({ note_id: noteId, storage_path: storagePath, file_name: file.name, mime_type: mimeType, size_bytes: file.size });
       }
+      const { error } = await db.from('appointment_notes').insert({ id: noteId, appointment_id: noteAppointment.id, note_type: noteType, body: noteBody.trim() || null, use_in_final_report: noteUseInReport }).select('id').single();
+      if (error) throw new Error('NOTE');
+      if (attachments.length) { const { error: attachmentError } = await db.from('appointment_note_attachments').insert(attachments); if (attachmentError) throw new Error('METADATA'); }
       if (noteMode === 'completion') await completeAppointment(noteAppointment);
-      setNoteAppointment(null); setNoteBody(''); setNoteFiles([]); setMessage(noteMode === 'completion' ? 'הפגישה הושלמה וההערה נשמרה.' : 'ההערה נוספה לפגישה.');
+      setNoteAppointment(null); setNoteBody(''); setNoteFiles([]); setUploadProgress(''); setMessage(noteMode === 'completion' ? 'הפגישה הושלמה וההערה נשמרה.' : 'ההערה נוספה לפגישה.');
       await load();
-    } catch { setNoteError('שמירת ההערה נכשלה. בדקו את החיבור ונסו שוב.'); }
+    } catch (caught) { const message = caught instanceof Error && caught.message.startsWith('UPLOAD:') ? `העלאת הקובץ ${caught.message.slice(7)} נכשלה. בדקו את החיבור או נסו תמונה קטנה יותר.` : 'שמירת ההערה נכשלה. ההערה לא נוספה; בדקו את החיבור ונסו שוב.'; setUploadProgress(''); setNoteFileError(message); setNoteError(message); }
     finally { saveLock.current = false; setSaving(false); }
   }
   async function saveAppointment(e: React.FormEvent) {
@@ -298,7 +316,7 @@ export default function CalendarPage() {
       <label className="full">הערות לפגישה<textarea className="input" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label>
     </fieldset>{showAddressForm && selectedCustomer && <div className="modal-backdrop"><section className="inline-address-form modal-card"><h3>כתובת חדשה עבור {selectedCustomer.full_name}</h3><div className="form-grid"><label>שם הכתובת <span className="optional">(אופציונלי)</span><input className="input" value={addressForm.label} onChange={e => setAddressForm({ ...addressForm, label: e.target.value })} /></label><label>עיר<input className="input" aria-invalid={!!fieldErrors.modalCity} required value={addressForm.city} onChange={e => { setAddressForm({ ...addressForm, city: e.target.value, latitude: null, longitude: null }); setFieldErrors(current => ({ ...current, modalCity: '' })); setFormError(''); }} /><FieldError message={fieldErrors.modalCity} /></label><label className="full">כתובת<input className="input" aria-invalid={!!fieldErrors.modalAddress} required value={addressForm.address} onChange={e => { setAddressForm({ ...addressForm, address: e.target.value, latitude: null, longitude: null }); setFieldErrors(current => ({ ...current, modalAddress: '' })); setFormError(''); }} /><FieldError message={fieldErrors.modalAddress} /></label><AddressVerification address={addressForm.address} city={addressForm.city} latitude={addressForm.latitude} longitude={addressForm.longitude} onChange={location => { setAddressForm(current => ({ ...current, latitude: location?.latitude ?? null, longitude: location?.longitude ?? null })); setFieldErrors(current => ({ ...current, modalLocation: '' })); setFormError(''); }} /><FieldError message={fieldErrors.modalLocation} /></div><button className="btn" type="button" disabled={saving} onClick={saveAddress}>שמור ובחר כתובת</button></section></div>}<div className="toolbar form-actions"><button className="btn btn-primary" disabled={saving}>{saving ? 'שומר…' : editing ? 'שמור שינויים' : 'שמור פגישה'}</button><SaveError message={formError} /><button className="btn" type="button" disabled={saving} onClick={() => { setShow(false); setEditing(null); setFormError(''); setFieldErrors({}); }}>ביטול</button></div></form>}
     {confirmCancel && <section className="card delete-confirm" role="alertdialog" aria-labelledby="cancel-meeting-title"><h2 className="section-title" id="cancel-meeting-title">לבטל את הפגישה עם {confirmCancel.customers?.full_name}?</h2><p>הפגישה תישאר בהיסטוריה עם סטטוס “בוטלה”.</p><label>סיבת ביטול <span className="optional">(אופציונלי)</span><textarea className="input" value={cancelReason} onChange={e => setCancelReason(e.target.value)} /></label><div className="toolbar" style={{ marginTop: 14 }}><button className="btn btn-danger" disabled={saving} onClick={cancelAppointment}>{saving ? 'מבטל…' : 'כן, לבטל פגישה'}</button><button className="btn" disabled={saving} onClick={() => setConfirmCancel(null)}>חזרה</button></div></section>}
-    {noteAppointment && <div className="modal-backdrop"><form noValidate className="card modal-card note-form" onSubmit={saveNote} role="dialog" aria-modal="true" aria-labelledby="note-title"><h2 className="section-title" id="note-title">{noteMode === 'completion' ? 'סיום פגישה' : 'הערה לפגישה'} עם {noteAppointment.customers?.full_name}</h2>{noteMode === 'completion' && <p className="form-hint">אפשר להוסיף סיכום וקבצים לפני סימון הפגישה כהושלמה, או לסיים ללא הערה.</p>}<label>סוג ההערה<select className="input" value={noteType} onChange={e => setNoteType(e.target.value as 'research' | 'meeting_summary')}><option value="research">מחקר</option><option value="meeting_summary">סיכום פגישה</option></select></label><label>תוכן <span className="optional">(אופציונלי כאשר מצורף קובץ)</span><textarea autoFocus className="input" aria-invalid={!!noteError} value={noteBody} onChange={e => { setNoteBody(e.target.value); setNoteError(''); }} /></label><label>מסמכים, תמונות או סרטונים קצרים <span className="optional">(עד 5 קבצים, 50 MB לקובץ)</span><input className="input file-input" type="file" multiple accept="image/jpeg,image/png,image/webp,image/heic,video/mp4,video/quicktime,video/webm,application/pdf,text/plain,.doc,.docx,.xls,.xlsx" onChange={e => { setNoteFiles(Array.from(e.target.files ?? [])); setNoteError(''); }} /></label>{noteFiles.length > 0 && <ul className="selected-files">{noteFiles.map(file => <li key={`${file.name}-${file.lastModified}`}>{file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB</li>)}</ul>}<label className="report-checkbox"><input type="checkbox" checked={noteUseInReport} onChange={e => setNoteUseInReport(e.target.checked)} /> להשתמש בהערה ובקבצים בדוח הסופי</label><FieldError message={noteError} /><div className="toolbar form-actions"><button className="btn btn-primary" disabled={saving}>{saving ? 'שומר…' : noteMode === 'completion' ? 'שמירה וסיום הפגישה' : 'שמירת הערה'}</button>{noteMode === 'completion' && <button className="btn" type="button" disabled={saving} onClick={completeWithoutNote}>סיום ללא הערה</button>}<SaveError message={noteError} /><button className="btn" type="button" disabled={saving} onClick={() => setNoteAppointment(null)}>ביטול</button></div></form></div>}
+    {noteAppointment && <div className="modal-backdrop"><form noValidate className="card modal-card note-form" onSubmit={saveNote} role="dialog" aria-modal="true" aria-labelledby="note-title"><h2 className="section-title" id="note-title">{noteMode === 'completion' ? 'סיום פגישה' : 'הערה לפגישה'} עם {noteAppointment.customers?.full_name}</h2><SaveError message={noteError} />{noteMode === 'completion' && <p className="form-hint">אפשר להוסיף סיכום וקבצים לפני סימון הפגישה כהושלמה, או לסיים ללא הערה.</p>}<label>סוג ההערה<select className="input" value={noteType} onChange={e => setNoteType(e.target.value as 'research' | 'meeting_summary')}><option value="research">מחקר</option><option value="meeting_summary">סיכום פגישה</option></select></label><label>תוכן <span className="optional">(אופציונלי כאשר מצורף קובץ)</span><textarea autoFocus className="input" aria-invalid={!!noteError && !noteFileError} value={noteBody} onChange={e => { setNoteBody(e.target.value); setNoteError(''); }} /></label><label>מסמכים, תמונות או סרטונים קצרים <span className="optional">(עד 5 קבצים, 50 MB לקובץ)</span><input className="input file-input" aria-invalid={!!noteFileError} type="file" multiple accept="image/*,video/*,application/pdf,text/plain,.doc,.docx,.xls,.xlsx" onChange={e => selectNoteFiles(Array.from(e.target.files ?? []))} /><FieldError message={noteFileError} /></label>{noteFiles.length > 0 && <ul className="selected-files">{noteFiles.map(file => <li key={`${file.name}-${file.lastModified}`}>{file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB</li>)}</ul>}{uploadProgress && <p className="upload-progress" role="status">{uploadProgress}</p>}<label className="report-checkbox"><input type="checkbox" checked={noteUseInReport} onChange={e => setNoteUseInReport(e.target.checked)} /> להשתמש בהערה ובקבצים בדוח הסופי</label><div className="toolbar form-actions"><button className="btn btn-primary" disabled={saving}>{saving ? 'שומר…' : noteMode === 'completion' ? 'שמירה וסיום הפגישה' : 'שמירת הערה'}</button>{noteMode === 'completion' && <button className="btn" type="button" disabled={saving} onClick={completeWithoutNote}>סיום ללא הערה</button>}<SaveError message={noteError} /><button className="btn" type="button" disabled={saving} onClick={() => setNoteAppointment(null)}>ביטול</button></div></form></div>}
     <div className="calendar-controls card"><div className="view-tabs">{([['agenda','רשימה'],['day','יום'],['week','שבוע']] as [CalendarView,string][]).map(([value,label]) => <button key={value} className={`view-tab ${calendarView === value ? 'active' : ''}`} onClick={() => setCalendarView(value)}>{label}</button>)}</div>{calendarView !== 'agenda' && <div className="date-navigation"><button className="btn" onClick={() => setFocusDate(addDays(focusDate, calendarView === 'week' ? -7 : -1))}>הקודם</button><button className="btn" onClick={() => setFocusDate(todayInIsrael)}>היום</button><strong>{calendarView === 'day' ? dateFormatter.format(new Date(israelLocalToIso(focusDate, '12:00'))) : `שבוע שמתחיל ${weekStart}`}</strong><button className="btn" onClick={() => setFocusDate(addDays(focusDate, calendarView === 'week' ? 7 : 1))}>הבא</button></div>}</div>
     {loading ? <p role="status">טוען פגישות…</p> : calendarView === 'agenda' ? <div className="calendar-sections">
       <section><div className="section-heading"><h2>פגישות קרובות</h2><span className="count-pill">{upcoming.length}</span></div>{upcoming.length ? <div className="appointment-list">{upcoming.map(item => <AppointmentCard appointment={item} attachmentUrls={attachmentUrls} onEdit={openEdit} onCancel={appointment => { setShow(false); setEditing(null); setConfirmCancel(appointment); setMessage(''); setError(''); }} onStatus={advanceAppointment} onAddNote={openNote} key={item.id} />)}</div> : <div className="card empty-state">אין פגישות עתידיות.</div>}</section>

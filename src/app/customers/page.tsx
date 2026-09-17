@@ -15,6 +15,7 @@ export default function CustomersPage() {
   const { canDelete } = usePermissions();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [q, setQ] = useState('');
+  const [sortBy, setSortBy] = useState<'updated' | 'next' | 'completed'>('updated');
   const [show, setShow] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [newAddresses, setNewAddresses] = useState<AddressDraft[]>([newAddressDraft()]);
@@ -35,8 +36,7 @@ export default function CustomersPage() {
     setLoading(true); setError('');
     try {
       const { data, error } = await getSupabase().from('customers')
-        .select('id, full_name, phone, notes, customer_addresses!address_customer_organization_fk(id,label,address,city,latitude,longitude), appointments!appointment_customer_organization_fk(starts_at,status)')
-        .order('created_at', { ascending: false });
+        .select('id, full_name, phone, notes, updated_at, customer_addresses!address_customer_organization_fk(id,label,address,city,latitude,longitude), appointments!appointment_customer_organization_fk(starts_at,status)');
       if (error) throw error;
       const nextCustomers = data ?? [];
       setCustomers(nextCustomers);
@@ -48,8 +48,17 @@ export default function CustomersPage() {
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('new') === '1') setShow(true);
   }, []);
-  const filtered = useMemo(() => customers.filter(c =>
-    `${c.full_name} ${c.phone} ${c.customer_addresses.map(a => `${a.city ?? ''} ${a.address}`).join(' ')}`.toLowerCase().includes(q.trim().toLowerCase())), [q, customers]);
+  const filtered = useMemo(() => {
+    const now = Date.now();
+    const visible = customers.filter(c => `${c.full_name} ${c.phone} ${c.customer_addresses.map(a => `${a.city ?? ''} ${a.address}`).join(' ')}`.toLowerCase().includes(q.trim().toLowerCase()));
+    const nextMeeting = (customer: Customer) => Math.min(...customer.appointments.filter(a => a.status !== 'cancelled' && new Date(a.starts_at).getTime() >= now).map(a => new Date(a.starts_at).getTime()), Infinity);
+    const lastCompleted = (customer: Customer) => Math.max(...customer.appointments.filter(a => a.status === 'completed').map(a => new Date(a.starts_at).getTime()), -Infinity);
+    return visible.sort((a, b) => sortBy === 'next'
+      ? nextMeeting(a) - nextMeeting(b) || new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      : sortBy === 'completed'
+        ? lastCompleted(b) - lastCompleted(a) || new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+        : new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+  }, [q, customers, sortBy]);
   async function addCustomer(e: React.FormEvent) {
     e.preventDefault(); if (saveLock.current) return;
     const nextErrors: Record<string, string> = {};
@@ -229,7 +238,7 @@ export default function CustomersPage() {
       <div className="toolbar"><button className="btn btn-danger" disabled={saving} onClick={removeAddress}>{saving ? 'מסיר…' : 'כן, להסיר'}</button><button className="btn" disabled={saving} onClick={() => setConfirmDeleteAddress(null)}>ביטול</button></div>
     </section>}
     <div className="card">
-      <div className="toolbar"><input className="input" aria-label="חיפוש לקוחות" placeholder="חיפוש לפי שם, טלפון, עיר או כתובת" value={q} onChange={e => setQ(e.target.value)} /></div>
+      <div className="toolbar customer-list-toolbar"><input className="input" aria-label="חיפוש לקוחות" placeholder="חיפוש לפי שם, טלפון, עיר או כתובת" value={q} onChange={e => setQ(e.target.value)} /><label className="sort-control">מיון<select className="input" value={sortBy} onChange={e => setSortBy(e.target.value as 'updated' | 'next' | 'completed')}><option value="updated">עודכנו לאחרונה</option><option value="next">פגישה קרובה תחילה</option><option value="completed">פגישה שהושלמה לאחרונה</option></select></label></div>
       {loading ? <p role="status">טוען לקוחות…</p> : <>
         {!filtered.length && <p>{q ? 'לא נמצאו לקוחות תואמים.' : 'עדיין אין לקוחות. הוסיפו את הלקוח הראשון.'}</p>}
         {!!filtered.length && <div className="table-wrap"><table className="table"><thead><tr><th>לקוח</th><th>טלפון</th><th>כתובות</th><th>הערות</th><th>פגישות עתידיות</th><th>פגישות עבר</th><th>פעולות</th></tr></thead><tbody>{filtered.map(c => <tr key={c.id}>

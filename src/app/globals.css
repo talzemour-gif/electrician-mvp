@@ -21,6 +21,7 @@ h1 { margin:0; font-size:28px; }
 .capabilities-card ul { margin: 0; padding-right: 20px; line-height: 1.8; }
 .muted { color:#6b7280; }
 .toolbar { display:flex; gap:10px; align-items:center; margin-bottom:16px; }
+.customer-list-toolbar .sort-control { min-width: 230px; }
 .input { width:100%; border:1px solid #d1d5db; border-radius:10px; padding:11px 12px; background:white; }
 .btn { border:0; border-radius:10px; padding:11px 16px; cursor:pointer; font-weight:700; }
 .btn-primary { background:#111827; color:white; }

@@ -10,6 +10,7 @@ The application currently supports:
 
 - Email/password authentication for approved staff.
 - Customer creation, search, editing, notes, and multiple addresses.
+- Customer-list sorting by recent activity, nearest upcoming appointment, or most recently completed appointment.
 - Address creation, editing, and deletion when an appointment does not reference it.
 - Service types with default price, duration, notes, and active status.
 - Appointment creation, editing, cancellation with an optional reason, and history.
@@ -139,7 +140,7 @@ Stores any number of timestamped notes for an appointment. Each note is classifi
 
 ### `appointment_note_attachments`
 
-Stores private attachment metadata for note documents, images, and short videos. Binary files live in the private Supabase Storage bucket `appointment-files`; object paths begin with the organization ID and Storage RLS compares that folder with `current_organization_id()`. The UI permits five files per note and 50 MB per file. It creates one-hour signed URLs for viewing, previews supported images and videos, and renders documents as secure links. Do not make this bucket public.
+Stores private attachment metadata for note documents, images, and short videos. Binary files live in the private Supabase Storage bucket `appointment-files`; object paths begin with the organization ID and Storage RLS compares that folder with `current_organization_id()`. The UI permits five files per note and 50 MB per file. It normalizes MIME types from mobile camera filenames, including HEIC/HEIF, validates files before saving the note, reports upload progress and failures next to the file control and Save button, creates one-hour signed URLs for viewing, previews supported images and videos, and renders documents as secure links. Do not make this bucket public.
 
 ### `appointment_reschedules`
 
@@ -216,6 +217,7 @@ Current migration order:
 9. `202609170002_remove_redundant_tenant_foreign_keys.sql` — removes the superseded single-column relationships so tenant-safe PostgREST embeds are unambiguous, including for empty organizations.
 10. `202609170003_appointment_completion_notes.sql` — adds the in-progress/completed workflow timestamps and tenant-isolated, timestamped appointment notes.
 11. `202609170004_note_attachments.sql` — adds final-report flags, private mixed-media note attachments, and tenant-scoped Storage policies.
+12. `202609170005_mobile_camera_mime.sql` — permits the HEIF MIME variant produced by some mobile camera uploads.
 
 The hosted project was initialized manually through the Supabase SQL Editor. Those applications are not registered in Supabase CLI migration history. Reconcile the hosted baseline before adopting `supabase db push`; do not replay the initial migration blindly.
 
