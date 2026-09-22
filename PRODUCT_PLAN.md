@@ -147,12 +147,9 @@ Payment **status tracking** remains in scope because staff need to know whether 
 
 ## Immediate next steps
 
-1. Prepare the existing MVP for production deployment.
-2. Deploy it and verify authentication, database access, and core workflows on mobile and laptop.
-3. Complete and verify the two-business multi-tenant foundation.
-4. Implement appointment completion, payment status, contact source, history, export, and backup.
-5. Run the one-week production pilot.
-6. Prioritize pilot findings before starting WhatsApp-assisted communication.
+1. Review and test all appointment comments and customer research notes: creation, display, timestamps, authors, file attachments where supported, error feedback, tenant isolation, and mobile usability.
+2. Run the one-week production pilot.
+3. Prioritize pilot findings before starting WhatsApp-assisted communication.
 
 ## Decisions to make with the electrician
 
