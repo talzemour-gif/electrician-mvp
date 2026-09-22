@@ -13,6 +13,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const currentUserId = useRef<string | null>(null);
+  const sessionUserId = session?.user.id;
   useEffect(() => {
     let active = true;
     try {
@@ -39,9 +40,9 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     } catch (e) { setError((e as Error).message); setLoading(false); }
   }, []);
   useEffect(() => {
-    if (!session) return;
+    if (!sessionUserId) return;
     let active = true;
-    Promise.resolve(getSupabase().from('organization_members').select('user_id,organizations(name)').eq('user_id', session.user.id).maybeSingle())
+    Promise.resolve(getSupabase().from('organization_members').select('user_id,organizations(name)').eq('user_id', sessionUserId).maybeSingle())
       .then(({ data, error }) => {
         if (!active) return;
         setAllowed(!!data && !error);
@@ -53,7 +54,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         if (active) { setAllowed(false); setError('בדיקת ההרשאות נכשלה. נסו להתנתק ולהתחבר מחדש.'); setLoading(false); }
       });
     return () => { active = false; };
-  }, [session?.user.id]);
+  }, [sessionUserId]);
   async function login(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setError('');
     try {
