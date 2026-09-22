@@ -30,7 +30,7 @@ export default function HomePage() {
         db.from('customers').select('id', { count: 'exact', head: true }),
         db.from('appointments').select('id', { count: 'exact', head: true }).in('status', ['scheduled', 'in_progress']),
         db.from('job_types').select('id', { count: 'exact', head: true }).eq('active', true),
-        db.from('appointments').select('id,starts_at,status,customers!appointment_customer_organization_fk(full_name),customer_addresses!appointment_address_customer_organization_fk(address,city,latitude,longitude)').in('status', ['scheduled', 'in_progress']).order('starts_at'),
+        db.from('appointments').select('id,starts_at,status,customers!appointment_customer_organization_fk(full_name),customer_addresses!appointment_address_customer_organization_fk(address,city,latitude,longitude)').neq('status', 'cancelled').order('starts_at'),
       ]);
       if (results.some(result => result.error)) throw new Error('Unable to load dashboard');
       setStats({ customers: results[0].count ?? 0, appointments: results[1].count ?? 0, jobs: results[2].count ?? 0 });
@@ -66,7 +66,7 @@ export default function HomePage() {
       </div>
       <section className="dashboard-route">
         <div className="section-heading"><h2>{routeDay ? `מסלול ל${displayDate.format(new Date(`${routeDay.date}T12:00:00Z`))}` : 'המסלול הבא'}</h2><span className="count-pill">{routeStops.length}</span></div>
-        {routeDay ? <DayRouteMap stops={routeStops} /> : <div className="card empty-state">אין פגישות פתוחות להצגה.</div>}
+        {routeDay ? <DayRouteMap stops={routeStops} /> : <div className="card empty-state">אין פגישות להצגה.</div>}
       </section>
     </>}
     <div className="card capabilities-card"><h2 className="section-title">מה אפשר לעשות במערכת</h2><ul><li>ניהול לקוחות, הערות ומספר כתובות מאומתות במפה</li><li>יצירה, חיפוש, עדכון וביטול פגישות</li><li>תצוגות רשימה, יום ושבוע עם מסלול נסיעה יומי</li><li>ניהול שירותים, מחירים, משך והערות</li><li>סביבת עבודה פרטית ומאובטחת לכל עסק</li></ul></div>
