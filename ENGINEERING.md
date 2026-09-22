@@ -16,7 +16,7 @@ The application currently supports:
 - Service types with default price, duration, notes, and active status.
 - Appointment creation, editing, cancellation with an optional reason, and history.
 - Appointment payment status (`unpaid`, `partially_paid`, or `paid`) with quick updates from appointment cards.
-- Past and completed appointments remain editable. A completed appointment can be restored to `scheduled`; this clears its recorded start and completion timestamps while preserving its notes and attachments.
+- Past and completed appointments remain editable. The edit form can move an appointment back to an earlier workflow status; returning to `scheduled` clears start/completion timestamps, and returning to `in_progress` clears the completion timestamp. Notes and attachments remain. While editing, the calendar and other appointments are hidden to keep the user focused on the selected record.
 - Agenda, daily, and weekly calendar views.
 - Customer selection ordered by recent activity and filtered by name or phone.
 - Dashboard counts sourced from Supabase.
