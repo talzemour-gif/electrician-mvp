@@ -27,7 +27,7 @@ values (current_setting('test.org_b')::uuid, 'Tenant B private customer', '222')
 select set_config('request.jwt.claim.sub', current_setting('test.admin_a'), true);
 set local role authenticated;
 do $$
-declare c uuid; a uuid; v_note_id uuid; n integer;
+declare c uuid; a uuid; v_note_id uuid; v_research_id uuid; n integer;
 begin
   if public.current_organization_id() <> current_setting('test.org_a')::uuid then raise exception 'Wrong current organization'; end if;
   if (select count(*) from public.organizations) <> 1 then raise exception 'Organization isolation failed'; end if;
@@ -39,6 +39,9 @@ begin
   if not exists(select 1 from public.customer_addresses where customer_id = c and address = 'Test address' and organization_id = current_setting('test.org_a')::uuid) then raise exception 'Address not saved in tenant'; end if;
   update public.customers set notes = 'Updated notes' where id = c;
   if not exists(select 1 from public.customers where id = c and notes = 'Updated notes') then raise exception 'Update failed'; end if;
+  insert into public.customer_research(customer_id, body, author_email)
+    values(c, 'Between-appointment research', 'admin-a@example.test') returning id into v_research_id;
+  if not exists(select 1 from public.customer_research where id = v_research_id and organization_id = current_setting('test.org_a')::uuid and created_by = current_setting('test.admin_a')::uuid) then raise exception 'Customer research tenant or author assignment failed'; end if;
 
   insert into public.appointments(customer_id, customer_address_id, job_type_id, starts_at, duration_minutes, price)
   values (

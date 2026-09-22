@@ -55,11 +55,8 @@ The MVP already includes:
 1. Add an on-site completion flow. When work begins, the appointment can be marked in progress; when it finishes, it can be marked completed. Start/completion times and any number of timestamped research or meeting-summary notes are recorded. A note may combine text, private documents, photos, and short videos and can be flagged for inclusion in the final report. Completing a meeting offers the note editor before completion. **Implemented 2026-09-17.**
 2. Add payment status tracking, such as unpaid, partially paid, and paid. This tracks payment state only; collecting money inside the application is out of scope. **Implemented 2026-09-22.**
 3. Add a contact source to customers or leads, such as referral, Google, returning customer, or another source. **Implemented 2026-09-22.**
-4. Create a clear customer history combining appointments, status changes, addresses, notes, and relevant communication events.
-5. Create a clear appointment history, including creation, rescheduling, cancellation, completion, and payment-status changes.
-6. Define and test a data export and backup procedure, including how data can be restored.
-7. Allow staff to add notes while an appointment is in progress and after it is completed. Keep these notes attached to the appointment and visible in the customer's history.
-8. Allow staff to record research or professional work completed for a customer between appointments. Store the author and timestamp and show the entry in the customer's history without requiring an appointment.
+4. Allow staff to add notes while an appointment is in progress and after it is completed. Keep these notes attached to the appointment. **Implemented 2026-09-17.**
+5. Allow staff to record research or professional work completed for a customer between appointments. Store the author and timestamp without requiring an appointment. **Implemented 2026-09-22.**
 
 **Success measure:** Staff can understand the current state and history of every customer and appointment without relying on separate notes.
 
@@ -141,6 +138,12 @@ The broader on-site field workflow, including mobile checklists, measurements, s
 - A complete mobile field workflow for conducting inspections on site
 
 Payment **status tracking** remains in scope because staff need to know whether an appointment has been paid. Payment **processing and collection** are out of scope.
+
+## End-of-project enhancements
+
+- Create a combined customer history covering appointments, status changes, addresses, notes, research, and relevant communication events.
+- Create an appointment audit history covering creation, rescheduling, cancellation, completion, restoration, and payment-status changes.
+- Define and test organization-specific data export, backup, and restoration procedures.
 
 ## Immediate next steps
 

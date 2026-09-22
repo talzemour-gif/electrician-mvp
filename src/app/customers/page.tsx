@@ -32,13 +32,15 @@ export default function CustomersPage() {
   const [formError, setFormError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
+  const [researchText, setResearchText] = useState('');
+  const [researchError, setResearchError] = useState('');
   const [createdForMeeting, setCreatedForMeeting] = useState(false);
   const [now] = useState(() => Date.now());
   async function load() {
     setLoading(true); setError('');
     try {
       const { data, error } = await getSupabase().from('customers')
-        .select('id, full_name, phone, notes, contact_source, updated_at, customer_addresses!address_customer_organization_fk(id,label,address,city,latitude,longitude), appointments!appointment_customer_organization_fk(starts_at,status)');
+        .select('id, full_name, phone, notes, contact_source, updated_at, customer_addresses!address_customer_organization_fk(id,label,address,city,latitude,longitude), appointments!appointment_customer_organization_fk(starts_at,status), customer_research!customer_research_customer_organization_fk(id,body,author_email,created_at)');
       if (error) throw error;
       const nextCustomers = data ?? [];
       setCustomers(nextCustomers);
@@ -145,10 +147,21 @@ export default function CustomersPage() {
     } catch { setError('לא ניתן להסיר את הכתובת. ייתכן שהיא משויכת לפגישה קיימת.'); }
     finally { saveLock.current = false; setSaving(false); }
   }
+  async function addResearch() {
+    if (!editing || saveLock.current) return;
+    if (!researchText.trim()) { setResearchError('יש לכתוב את פרטי המחקר.'); return; }
+    saveLock.current = true; setSaving(true); setResearchError(''); setMessage('');
+    try {
+      const { error } = await getSupabase().from('customer_research').insert({ customer_id: editing.id, body: researchText.trim() }).select('id').single();
+      if (error) throw error;
+      setResearchText(''); setMessage('המחקר נוסף ללקוח.'); await load();
+    } catch { setResearchError('שמירת המחקר נכשלה. בדקו את החיבור ונסו שוב.'); }
+    finally { saveLock.current = false; setSaving(false); }
+  }
   function startEdit(customer: Customer) {
     setAddingAddress(null); setEditingAddress(null); setConfirmDeleteAddress(null); setEditing(customer);
     setForm({ name: customer.full_name, phone: customer.phone, notes: customer.notes ?? '', contactSource: customer.contact_source ?? '', city: '', label: 'בית', address: '' });
-    setShow(false); setMessage(''); setError(''); setFormError(''); setFieldErrors({});
+    setShow(false); setMessage(''); setError(''); setFormError(''); setFieldErrors({}); setResearchText(''); setResearchError('');
   }
   function updateNewAddress(key: number, field: keyof Omit<AddressDraft, 'key'>, value: string) {
     setNewAddresses(addresses => addresses.map(address => address.key === key ? { ...address, [field]: value } : address));
@@ -212,6 +225,12 @@ export default function CustomersPage() {
           <span className="address-actions"><button className="link-button" type="button" disabled={saving} onClick={() => startEditAddress(editing, address.id)}>עריכה</button>{canDelete && <button className="link-button danger-text" type="button" disabled={saving} onClick={() => { setAddingAddress(null); setEditingAddress(null); setConfirmDeleteAddress({ customer: editing, addressId: address.id, label: address.label }); setMessage(''); setError(''); setFormError(''); setFieldErrors({}); }}>הסרה</button>}</span>
         </div>)}
       </div>
+      <section className="customer-research">
+        <div className="address-manager-heading"><h3>מחקר בין פגישות</h3><span className="count-pill">{editing.customer_research.length}</span></div>
+        <label>מחקר חדש<textarea className="input" aria-invalid={!!researchError} placeholder="תיעוד מקצועי שבוצע עבור הלקוח בין פגישות" value={researchText} onChange={e => { setResearchText(e.target.value); setResearchError(''); }} /></label>
+        <div className="toolbar form-actions"><button className="btn" type="button" disabled={saving} onClick={addResearch}>{saving ? 'שומר…' : 'הוספת מחקר'}</button><SaveError message={researchError} /></div>
+        {!editing.customer_research.length ? <p className="muted">עדיין לא נוסף מחקר עבור הלקוח.</p> : <div className="research-list">{[...editing.customer_research].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map(entry => <article key={entry.id}><div className="note-meta"><strong>מחקר</strong><time>{new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', dateStyle: 'short', timeStyle: 'short' }).format(new Date(entry.created_at))}</time><span dir="ltr">{entry.author_email}</span></div><p>{entry.body}</p></article>)}</div>}
+      </section>
     </form>}
     {addingAddress && <form noValidate className="card" style={{ marginBottom: 16 }} onSubmit={addAddress}>
       <h2 className="section-title">כתובת חדשה עבור {addingAddress.full_name}</h2>

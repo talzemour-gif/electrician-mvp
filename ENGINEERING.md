@@ -11,6 +11,7 @@ The application currently supports:
 - Email/password authentication for approved staff.
 - Customer creation, search, editing, notes, and multiple addresses.
 - Optional customer contact-source tracking using a controlled list for future attribution reports.
+- Timestamped between-appointment research stored directly against a customer, including the author account.
 - Customer-list sorting by recent activity, nearest upcoming appointment, or most recently completed appointment.
 - Address creation, editing, and deletion when an appointment does not reference it.
 - Service types with default price, duration, notes, and active status.

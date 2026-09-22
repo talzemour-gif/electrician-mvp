@@ -13,5 +13,6 @@ export type Customer = {
   id: string; full_name: string; phone: string; notes: string | null; contact_source: string | null; updated_at: string;
   customer_addresses: { id: string; label: string; address: string; city: string | null; latitude: number | null; longitude: number | null }[];
   appointments: { starts_at: string; status: string }[];
+  customer_research: { id: string; body: string; author_email: string; created_at: string }[];
 };
 export type JobType = { id: string; name: string; default_price: number; default_duration_minutes: number; description: string | null };
