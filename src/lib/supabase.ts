@@ -10,7 +10,7 @@ export function getSupabase() {
 }
 
 export type Customer = {
-  id: string; full_name: string; phone: string; notes: string | null; updated_at: string;
+  id: string; full_name: string; phone: string; notes: string | null; contact_source: string | null; updated_at: string;
   customer_addresses: { id: string; label: string; address: string; city: string | null; latitude: number | null; longitude: number | null }[];
   appointments: { starts_at: string; status: string }[];
 };

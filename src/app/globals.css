@@ -85,6 +85,8 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .appointment-title { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
 .appointment-notes { margin-top: 3px; padding-top: 7px; border-top: 1px solid #eef0f2; white-space: pre-wrap; }
 .appointment-price { font-weight: 800; white-space: nowrap; }
+.payment-control { display: grid; gap: 4px; color: #6b7280; font-size: 12px; font-weight: 700; }
+.payment-control .input { min-width: 120px; padding: 8px 10px; font-size: 13px; }
 .appointment-side { display: grid; justify-items: end; gap: 10px; }
 .appointment-actions { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
 .address-inline-action { display: flex; align-items: end; padding-bottom: 10px; }

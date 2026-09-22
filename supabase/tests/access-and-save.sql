@@ -82,9 +82,12 @@ begin
     jsonb_build_array(
       jsonb_build_object('label', '', 'address', 'Street 1', 'city', 'City 1', 'latitude', 32.1, 'longitude', 34.8),
       jsonb_build_object('label', 'Office', 'address', 'Street 2', 'city', 'City 2', 'latitude', 32.2, 'longitude', 34.9)
-    )
+    ), 'referral'
   );
   if (select count(*) from public.customer_addresses where customer_id = c) <> 2 then raise exception 'Multi-address save failed'; end if;
+  if not exists(select 1 from public.customers where id = c and contact_source = 'referral') then raise exception 'Contact source save failed'; end if;
+  update public.appointments set payment_status = 'partially_paid' where id = a;
+  if not exists(select 1 from public.appointments where id = a and payment_status = 'partially_paid') then raise exception 'Payment status update failed'; end if;
 
   begin
     insert into public.customers(organization_id, full_name, phone)

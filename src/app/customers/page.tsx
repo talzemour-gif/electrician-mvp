@@ -7,7 +7,8 @@ import Link from 'next/link';
 import { usePermissions } from '@/lib/use-permissions';
 const AddressVerification = dynamic(() => import('@/components/address-verification'), { ssr: false });
 
-const emptyForm = { name: '', phone: '', city: '', label: 'בית', address: '', notes: '' };
+const emptyForm = { name: '', phone: '', city: '', label: 'בית', address: '', notes: '', contactSource: '' };
+const contactSourceLabels: Record<string, string> = { referral: 'הפניה', google: 'Google', returning_customer: 'לקוח חוזר', website: 'אתר', facebook_instagram: 'Facebook / Instagram', whatsapp: 'WhatsApp', phone: 'שיחת טלפון', other: 'אחר' };
 const emptyAddress = { label: 'בית', address: '', city: '', latitude: null as number | null, longitude: null as number | null };
 type AddressDraft = typeof emptyAddress & { key: number };
 const newAddressDraft = (): AddressDraft => ({ key: Date.now() + Math.random(), label: '', address: '', city: '', latitude: null, longitude: null });
@@ -32,11 +33,12 @@ export default function CustomersPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
   const [createdForMeeting, setCreatedForMeeting] = useState(false);
+  const [now] = useState(() => Date.now());
   async function load() {
     setLoading(true); setError('');
     try {
       const { data, error } = await getSupabase().from('customers')
-        .select('id, full_name, phone, notes, updated_at, customer_addresses!address_customer_organization_fk(id,label,address,city,latitude,longitude), appointments!appointment_customer_organization_fk(starts_at,status)');
+        .select('id, full_name, phone, notes, contact_source, updated_at, customer_addresses!address_customer_organization_fk(id,label,address,city,latitude,longitude), appointments!appointment_customer_organization_fk(starts_at,status)');
       if (error) throw error;
       const nextCustomers = data ?? [];
       setCustomers(nextCustomers);
@@ -49,7 +51,6 @@ export default function CustomersPage() {
     if (new URLSearchParams(window.location.search).get('new') === '1') setShow(true);
   }, []);
   const filtered = useMemo(() => {
-    const now = Date.now();
     const visible = customers.filter(c => `${c.full_name} ${c.phone} ${c.customer_addresses.map(a => `${a.city ?? ''} ${a.address}`).join(' ')}`.toLowerCase().includes(q.trim().toLowerCase()));
     const nextMeeting = (customer: Customer) => Math.min(...customer.appointments.filter(a => a.status !== 'cancelled' && new Date(a.starts_at).getTime() >= now).map(a => new Date(a.starts_at).getTime()), Infinity);
     const lastCompleted = (customer: Customer) => Math.max(...customer.appointments.filter(a => a.status === 'completed').map(a => new Date(a.starts_at).getTime()), -Infinity);
@@ -58,7 +59,7 @@ export default function CustomersPage() {
       : sortBy === 'completed'
         ? lastCompleted(b) - lastCompleted(a) || new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
         : new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-  }, [q, customers, sortBy]);
+  }, [q, customers, sortBy, now]);
   async function addCustomer(e: React.FormEvent) {
     e.preventDefault(); if (saveLock.current) return;
     const nextErrors: Record<string, string> = {};
@@ -69,7 +70,7 @@ export default function CustomersPage() {
     saveLock.current = true; setSaving(true); setError(''); setFormError(''); setFieldErrors({}); setMessage('');
     try {
       const { error } = await getSupabase().rpc('create_customer_with_addresses', {
-        p_name: form.name, p_phone: form.phone, p_notes: form.notes,
+        p_name: form.name, p_phone: form.phone, p_notes: form.notes, p_contact_source: form.contactSource || null,
         p_addresses: newAddresses.map(address => ({
           label: address.label.trim() || 'כתובת', address: address.address.trim(), city: address.city.trim(), latitude: address.latitude, longitude: address.longitude,
         })),
@@ -89,7 +90,7 @@ export default function CustomersPage() {
     saveLock.current = true; setSaving(true); setError(''); setFormError(''); setFieldErrors({}); setMessage('');
     try {
       const { error } = await getSupabase().from('customers').update({
-        full_name: form.name.trim(), phone: form.phone.trim(), notes: form.notes.trim() || null,
+        full_name: form.name.trim(), phone: form.phone.trim(), notes: form.notes.trim() || null, contact_source: form.contactSource || null,
       }).eq('id', editing.id).select('id').single();
       if (error) throw error;
       setEditing(null); setForm(emptyForm); setMessage('פרטי הלקוח עודכנו בהצלחה.'); await load();
@@ -146,7 +147,7 @@ export default function CustomersPage() {
   }
   function startEdit(customer: Customer) {
     setAddingAddress(null); setEditingAddress(null); setConfirmDeleteAddress(null); setEditing(customer);
-    setForm({ name: customer.full_name, phone: customer.phone, notes: customer.notes ?? '', city: '', label: 'בית', address: '' });
+    setForm({ name: customer.full_name, phone: customer.phone, notes: customer.notes ?? '', contactSource: customer.contact_source ?? '', city: '', label: 'בית', address: '' });
     setShow(false); setMessage(''); setError(''); setFormError(''); setFieldErrors({});
   }
   function updateNewAddress(key: number, field: keyof Omit<AddressDraft, 'key'>, value: string) {
@@ -174,6 +175,7 @@ export default function CustomersPage() {
           <div className="form-grid">
             <label>שם מלא<input className="input" aria-invalid={!!fieldErrors.name} required maxLength={200} value={form.name} onChange={e => { setForm({ ...form, name: e.target.value }); setFieldErrors(current => ({ ...current, name: '' })); setFormError(''); }} /><FieldError message={fieldErrors.name} /></label>
             <label>טלפון<input className="input" aria-invalid={!!fieldErrors.phone} type="tel" dir="ltr" required maxLength={30} value={form.phone} onChange={e => { setForm({ ...form, phone: e.target.value }); setFieldErrors(current => ({ ...current, phone: '' })); setFormError(''); }} /><FieldError message={fieldErrors.phone} /></label>
+            <label>מקור הפנייה <span className="optional">(אופציונלי)</span><select className="input" value={form.contactSource} onChange={e => setForm({ ...form, contactSource: e.target.value })}><option value="">לא ידוע</option>{Object.entries(contactSourceLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
             <label className="full">הערות על הלקוח<textarea className="input" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label>
           </div>
         </section>
@@ -198,6 +200,7 @@ export default function CustomersPage() {
       <fieldset disabled={saving} className="form-grid">
         <label>שם מלא<input className="input" aria-invalid={!!fieldErrors.name} required maxLength={200} value={form.name} onChange={e => { setForm({ ...form, name: e.target.value }); setFieldErrors(current => ({ ...current, name: '' })); setFormError(''); }} /><FieldError message={fieldErrors.name} /></label>
         <label>טלפון<input className="input" aria-invalid={!!fieldErrors.phone} type="tel" dir="ltr" required maxLength={30} value={form.phone} onChange={e => { setForm({ ...form, phone: e.target.value }); setFieldErrors(current => ({ ...current, phone: '' })); setFormError(''); }} /><FieldError message={fieldErrors.phone} /></label>
+        <label>מקור הפנייה <span className="optional">(אופציונלי)</span><select className="input" value={form.contactSource} onChange={e => setForm({ ...form, contactSource: e.target.value })}><option value="">לא ידוע</option>{Object.entries(contactSourceLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
         <label className="full">הערות<textarea className="input" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label>
       </fieldset>
       <div className="toolbar" style={{ marginTop: 14 }}><button className="btn btn-primary" disabled={saving}>{saving ? 'שומר…' : 'שמור שינויים'}</button><SaveError message={formError} /><button className="btn" type="button" disabled={saving} onClick={() => setEditing(null)}>ביטול</button></div>
@@ -241,8 +244,9 @@ export default function CustomersPage() {
       <div className="toolbar customer-list-toolbar"><input className="input" aria-label="חיפוש לקוחות" placeholder="חיפוש לפי שם, טלפון, עיר או כתובת" value={q} onChange={e => setQ(e.target.value)} /><label className="sort-control">מיון<select className="input" value={sortBy} onChange={e => setSortBy(e.target.value as 'updated' | 'next' | 'completed')}><option value="updated">עודכנו לאחרונה</option><option value="next">פגישה קרובה תחילה</option><option value="completed">פגישה שהושלמה לאחרונה</option></select></label></div>
       {loading ? <p role="status">טוען לקוחות…</p> : <>
         {!filtered.length && <p>{q ? 'לא נמצאו לקוחות תואמים.' : 'עדיין אין לקוחות. הוסיפו את הלקוח הראשון.'}</p>}
-        {!!filtered.length && <div className="table-wrap"><table className="table"><thead><tr><th>לקוח</th><th>טלפון</th><th>כתובות</th><th>הערות</th><th>פגישות עתידיות</th><th>פגישות עבר</th><th>פעולות</th></tr></thead><tbody>{filtered.map(c => <tr key={c.id}>
+        {!!filtered.length && <div className="table-wrap"><table className="table"><thead><tr><th>לקוח</th><th>טלפון</th><th>מקור</th><th>כתובות</th><th>הערות</th><th>פגישות עתידיות</th><th>פגישות עבר</th><th>פעולות</th></tr></thead><tbody>{filtered.map(c => <tr key={c.id}>
           <td data-label="לקוח"><strong>{c.full_name}</strong></td><td data-label="טלפון" dir="ltr">{c.phone}</td>
+          <td data-label="מקור">{c.contact_source ? contactSourceLabels[c.contact_source] ?? c.contact_source : '—'}</td>
           <td data-label="כתובות">{!c.customer_addresses.length ? '—' : c.customer_addresses.length === 1 ? <div className="single-address"><span className="address-dot" />{c.customer_addresses[0].label}: {c.customer_addresses[0].address}{c.customer_addresses[0].city ? `, ${c.customer_addresses[0].city}` : ''}</div> : <details className="address-summary"><summary>{c.customer_addresses.length} כתובות</summary><ul>{c.customer_addresses.map(a => <li key={a.id}><strong>{a.label}:</strong> {a.address}{a.city ? `, ${a.city}` : ''}</li>)}</ul></details>}</td>
           <td data-label="הערות" style={{ whiteSpace: 'pre-wrap' }}>{c.notes || '—'}</td>
           <td data-label="פגישות עתידיות"><span className="badge">{c.appointments.filter(a => a.status === 'scheduled' && new Date(a.starts_at).getTime() > Date.now()).length}</span></td>

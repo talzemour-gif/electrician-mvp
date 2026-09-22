@@ -1,6 +1,6 @@
 # Electrician MVP — Engineering Guide
 
-Last updated: 2026-09-17
+Last updated: 2026-09-22
 
 ## Purpose and current scope
 
@@ -10,10 +10,12 @@ The application currently supports:
 
 - Email/password authentication for approved staff.
 - Customer creation, search, editing, notes, and multiple addresses.
+- Optional customer contact-source tracking using a controlled list for future attribution reports.
 - Customer-list sorting by recent activity, nearest upcoming appointment, or most recently completed appointment.
 - Address creation, editing, and deletion when an appointment does not reference it.
 - Service types with default price, duration, notes, and active status.
 - Appointment creation, editing, cancellation with an optional reason, and history.
+- Appointment payment status (`unpaid`, `partially_paid`, or `paid`) with quick updates from appointment cards.
 - Agenda, daily, and weekly calendar views.
 - Customer selection ordered by recent activity and filtered by name or phone.
 - Dashboard counts sourced from Supabase.

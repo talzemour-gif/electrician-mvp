@@ -53,8 +53,8 @@ The MVP already includes:
 **Goal:** Cover the minimum workflow needed to operate the business in the system.
 
 1. Add an on-site completion flow. When work begins, the appointment can be marked in progress; when it finishes, it can be marked completed. Start/completion times and any number of timestamped research or meeting-summary notes are recorded. A note may combine text, private documents, photos, and short videos and can be flagged for inclusion in the final report. Completing a meeting offers the note editor before completion. **Implemented 2026-09-17.**
-2. Add payment status tracking, such as unpaid, partially paid, and paid. This tracks payment state only; collecting money inside the application is out of scope.
-3. Add a contact source to customers or leads, such as referral, Google, returning customer, or another source.
+2. Add payment status tracking, such as unpaid, partially paid, and paid. This tracks payment state only; collecting money inside the application is out of scope. **Implemented 2026-09-22.**
+3. Add a contact source to customers or leads, such as referral, Google, returning customer, or another source. **Implemented 2026-09-22.**
 4. Create a clear customer history combining appointments, status changes, addresses, notes, and relevant communication events.
 5. Create a clear appointment history, including creation, rescheduling, cancellation, completion, and payment-status changes.
 6. Define and test a data export and backup procedure, including how data can be restored.
