@@ -144,6 +144,7 @@ Payment **status tracking** remains in scope because staff need to know whether 
 - Create a combined customer history covering appointments, status changes, addresses, notes, research, and relevant communication events.
 - Create an appointment audit history covering creation, rescheduling, cancellation, completion, restoration, and payment-status changes.
 - Define and test organization-specific data export, backup, and restoration procedures.
+- Add a short “Get Started” questionnaire for new organizations. Ask about the business type, team, customer workflow, scheduling, communication, reporting, and other required capabilities; show which needs are already supported and which are not yet available. When the product offers multiple subscription plans, use the answers to recommend the most suitable plan and explain the recommendation before signup.
 
 ## Immediate next steps
 
