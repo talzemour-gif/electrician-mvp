@@ -10,10 +10,10 @@ select set_config('test.admin_b', gen_random_uuid()::text, true);
 insert into public.organizations(id, name) values
   (current_setting('test.org_a')::uuid, 'Isolation test A'),
   (current_setting('test.org_b')::uuid, 'Isolation test B');
-insert into auth.users(id) values
-  (current_setting('test.admin_a')::uuid),
-  (current_setting('test.staff_a')::uuid),
-  (current_setting('test.admin_b')::uuid);
+insert into auth.users(id, email) values
+  (current_setting('test.admin_a')::uuid, 'admin-a@example.test'),
+  (current_setting('test.staff_a')::uuid, 'staff-a@example.test'),
+  (current_setting('test.admin_b')::uuid, 'admin-b@example.test');
 insert into public.organization_members(user_id, organization_id, role) values
   (current_setting('test.admin_a')::uuid, current_setting('test.org_a')::uuid, 'admin'),
   (current_setting('test.staff_a')::uuid, current_setting('test.org_a')::uuid, 'staff'),
@@ -25,6 +25,8 @@ insert into public.customers(organization_id, full_name, phone)
 values (current_setting('test.org_b')::uuid, 'Tenant B private customer', '222');
 
 select set_config('request.jwt.claim.sub', current_setting('test.admin_a'), true);
+select set_config('request.jwt.claim.email', 'admin-a@example.test', true);
+select set_config('request.jwt.claims', jsonb_build_object('sub', current_setting('test.admin_a'), 'email', 'admin-a@example.test')::text, true);
 set local role authenticated;
 do $$
 declare c uuid; a uuid; v_note_id uuid; v_research_id uuid; n integer;
@@ -53,12 +55,18 @@ begin
   update public.appointments set status = 'in_progress', started_at = now() where id = a and status = 'scheduled';
   if not found then raise exception 'Appointment start transition failed'; end if;
   insert into public.appointment_notes(appointment_id, note_type, body, use_in_final_report) values(a, 'research', 'Timestamped research note', true) returning id into v_note_id;
-  if not exists(select 1 from public.appointment_notes where appointment_id = a and created_by = current_setting('test.admin_a')::uuid) then raise exception 'Appointment note author or tenant assignment failed'; end if;
+  if not exists(select 1 from public.appointment_notes where appointment_id = a and created_by = current_setting('test.admin_a')::uuid and author_email = 'admin-a@example.test') then raise exception 'Appointment note author or tenant assignment failed'; end if;
   insert into public.appointment_note_attachments(note_id, storage_path, file_name, mime_type, size_bytes)
   values(v_note_id, current_setting('test.org_a') || '/test/verification.pdf', 'verification.pdf', 'application/pdf', 100);
   if not exists(select 1 from public.appointment_note_attachments where note_id = v_note_id and organization_id = current_setting('test.org_a')::uuid) then raise exception 'Appointment attachment tenant assignment failed'; end if;
   update public.appointments set status = 'completed', completed_at = now() where id = a and status = 'in_progress';
   if not found then raise exception 'Appointment completion transition failed'; end if;
+  begin
+    insert into public.customer_research(organization_id, customer_id, body, author_email)
+    values(current_setting('test.org_b')::uuid, c, 'Cross tenant research', 'admin-a@example.test');
+    raise exception 'Cross-tenant customer research insert allowed';
+  exception when insufficient_privilege or foreign_key_violation then null;
+  end;
   begin
     insert into public.appointment_notes(organization_id, appointment_id, note_type, body)
     values(current_setting('test.org_b')::uuid, a, 'meeting_summary', 'Cross tenant note');
@@ -116,9 +124,11 @@ end $$;
 reset role;
 
 select set_config('request.jwt.claim.sub', current_setting('test.staff_a'), true);
+select set_config('request.jwt.claim.email', 'staff-a@example.test', true);
+select set_config('request.jwt.claims', jsonb_build_object('sub', current_setting('test.staff_a'), 'email', 'staff-a@example.test')::text, true);
 set local role authenticated;
 do $$
-declare c uuid;
+declare c uuid; r uuid;
 begin
   c := public.create_customer_with_addresses(
     'Restricted staff verification', '000-0000000', '',
@@ -126,12 +136,17 @@ begin
   );
   update public.customers set notes = 'Staff update allowed' where id = c;
   if not found then raise exception 'Staff update denied'; end if;
+  insert into public.customer_research(customer_id, body) values(c, 'Staff research') returning id into r;
+  if not exists(select 1 from public.customer_research where id = r and author_email = 'staff-a@example.test') then raise exception 'Staff research insert or author capture failed'; end if;
+  delete from public.customer_research where id = r;
+  if found then raise exception 'Staff research delete allowed'; end if;
   delete from public.customers where id = c;
   if found then raise exception 'Staff delete allowed'; end if;
 end $$;
 reset role;
 
 select set_config('request.jwt.claim.sub', gen_random_uuid()::text, true);
+select set_config('request.jwt.claims', jsonb_build_object('sub', current_setting('request.jwt.claim.sub'))::text, true);
 set local role authenticated;
 do $$ begin
   if exists(select 1 from public.job_types) then raise exception 'Non-member can read business data'; end if;

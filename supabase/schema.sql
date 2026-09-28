@@ -316,6 +316,7 @@ create table public.appointment_notes (
   body text,
   use_in_final_report boolean not null default false,
   created_by uuid not null default auth.uid() references auth.users(id),
+  author_email text not null default (auth.jwt() ->> 'email'),
   created_at timestamptz not null default now(),
   constraint appointment_notes_appointment_organization_fk
     foreign key (appointment_id, organization_id) references public.appointments(id, organization_id) on delete cascade

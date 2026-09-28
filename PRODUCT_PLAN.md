@@ -148,9 +148,10 @@ Payment **status tracking** remains in scope because staff need to know whether 
 
 ## Immediate next steps
 
-1. Review and test all appointment comments and customer research notes: creation, display, timestamps, authors, file attachments where supported, error feedback, tenant isolation, and mobile usability.
-2. Run the one-week production pilot.
-3. Prioritize pilot findings before starting WhatsApp-assisted communication.
+1. Run the one-week production pilot.
+2. Prioritize pilot findings before starting WhatsApp-assisted communication.
+
+Appointment comments and customer research notes were reviewed on 2026-09-28. The review covered creation, display, Israel-local timestamps, readable authors, appointment-note attachments, inline error feedback, tenant isolation, staff deletion restrictions, and responsive mobile presentation.
 
 ## Decisions to make with the electrician
 

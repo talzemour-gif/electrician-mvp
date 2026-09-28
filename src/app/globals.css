@@ -116,6 +116,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .appointment-note-list p { margin: 5px 0 0; white-space: pre-wrap; }
 .note-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .note-meta strong { padding: 3px 7px; border-radius: 999px; color: #166534; background: #dcfce7; font-size: 11px; }
+.note-meta .note-author { color: #4b5563; font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
 .note-attachments { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 9px; }
 .note-attachments img, .note-attachments video { width: 100%; max-height: 180px; border-radius: 9px; object-fit: cover; background: #111827; }
 .attachment-link { display: grid; place-items: center; min-height: 62px; padding: 9px; border: 1px solid #dbe1e8; border-radius: 9px; background: white; color: #1d4ed8; overflow-wrap: anywhere; text-align: center; }
@@ -203,6 +204,8 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
   .appointment-card { gap: 12px; padding: 14px; }
   .appointment-side { width: 100%; }
   .appointment-actions { width: 100%; justify-content: space-between; }
+  .note-meta { align-items: flex-start; }
+  .note-meta .note-author { flex-basis: 100%; }
   .calendar-controls { padding: 10px; }
   .view-tabs { display: grid; grid-template-columns: repeat(3, 1fr); }
   .view-tab { padding: 9px 6px; }

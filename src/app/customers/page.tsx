@@ -227,7 +227,7 @@ export default function CustomersPage() {
       </div>
       <section className="customer-research">
         <div className="address-manager-heading"><h3>מחקר בין פגישות</h3><span className="count-pill">{editing.customer_research.length}</span></div>
-        <label>מחקר חדש<textarea className="input" aria-invalid={!!researchError} placeholder="תיעוד מקצועי שבוצע עבור הלקוח בין פגישות" value={researchText} onChange={e => { setResearchText(e.target.value); setResearchError(''); }} /></label>
+        <label>מחקר חדש<textarea className="input" aria-invalid={!!researchError} placeholder="תיעוד מקצועי שבוצע עבור הלקוח בין פגישות" value={researchText} onChange={e => { setResearchText(e.target.value); setResearchError(''); }} /><FieldError message={researchError} /></label>
         <div className="toolbar form-actions"><button className="btn" type="button" disabled={saving} onClick={addResearch}>{saving ? 'שומר…' : 'הוספת מחקר'}</button><SaveError message={researchError} /></div>
         {!editing.customer_research.length ? <p className="muted">עדיין לא נוסף מחקר עבור הלקוח.</p> : <div className="research-list">{[...editing.customer_research].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map(entry => <article key={entry.id}><div className="note-meta"><strong>מחקר</strong><time>{new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', dateStyle: 'short', timeStyle: 'short' }).format(new Date(entry.created_at))}</time><span dir="ltr">{entry.author_email}</span></div><p>{entry.body}</p></article>)}</div>}
       </section>

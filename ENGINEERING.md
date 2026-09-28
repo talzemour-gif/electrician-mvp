@@ -142,7 +142,7 @@ References a customer, customer address, and service. It stores the scheduled in
 
 ### `appointment_notes`
 
-Stores any number of timestamped notes for an appointment. Each note is classified as `research` or `meeting_summary`, records its author through `created_by`, and has a `use_in_final_report` flag. Text is optional when the note has an attachment. Notes are tenant-isolated with an organization-consistent appointment foreign key. Members may add and update notes; only organization admins may delete them. The records are designed to appear in the customer timeline in a later Phase 2 change.
+Stores any number of timestamped notes for an appointment. Each note is classified as `research` or `meeting_summary`, records its author through `created_by`, captures `author_email` from the authenticated JWT for readable attribution, and has a `use_in_final_report` flag. Text is optional when the note has an attachment. Notes are tenant-isolated with an organization-consistent appointment foreign key. Members may add and update notes; only organization admins may delete them. The calendar displays the author and Israel-local timestamp with each note. The records are designed to appear in the customer timeline in a later Phase 2 change.
 
 ### `appointment_note_attachments`
 
@@ -224,6 +224,9 @@ Current migration order:
 10. `202609170003_appointment_completion_notes.sql` — adds the in-progress/completed workflow timestamps and tenant-isolated, timestamped appointment notes.
 11. `202609170004_note_attachments.sql` — adds final-report flags, private mixed-media note attachments, and tenant-scoped Storage policies.
 12. `202609170005_mobile_camera_mime.sql` — permits the HEIF MIME variant produced by some mobile camera uploads.
+13. `202609220001_customer_contact_source.sql` — adds the tenant-owned customer contact-source field.
+14. `202609220002_customer_research.sql` — adds timestamped, author-attributed research directly to the customer timeline.
+15. `202609280001_appointment_note_authors.sql` — backfills and captures a readable author email for appointment notes.
 
 The hosted project was initialized manually through the Supabase SQL Editor. Those applications are not registered in Supabase CLI migration history. Reconcile the hosted baseline before adopting `supabase db push`; do not replay the initial migration blindly.
 
